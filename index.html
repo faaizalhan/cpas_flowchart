@@ -1,1 +1,839 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f1117;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 40px;
+    min-width: 1800px;
+  }
 
+  .title-block {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .title-block h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+  .title-block p {
+    color: #888;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .badge {
+    display: inline-block;
+    background: #1565c0;
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-top: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #ccc;
+  }
+  .legend-box {
+    width: 20px; height: 16px;
+    border-radius: 4px;
+  }
+
+  /* ── FLOW CANVAS ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  /* ── NODE STYLES ── */
+  .node {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    padding: 10px 14px;
+    position: relative;
+    white-space: nowrap;
+  }
+
+  /* shapes */
+  .pill       { border-radius: 999px; min-width: 160px; padding: 10px 20px; }
+  .rect       { border-radius: 8px;   min-width: 160px; }
+  .diamond    { transform: rotate(45deg); width: 130px; height: 130px; }
+  .diamond .label { transform: rotate(-45deg); font-size: 12px; font-weight: 700; }
+  .hexagon    { border-radius: 8px; min-width: 170px; clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%); padding: 12px 28px; }
+  .octagon    { border-radius: 8px; min-width: 150px; clip-path: polygon(20% 0%,80% 0%,100% 20%,100% 80%,80% 100%,20% 100%,0% 80%,0% 20%); padding: 14px 20px; }
+
+  /* colors */
+  .c-start    { background: #263238; color: #eceff1; border: 2px solid #546e7a; }
+  .c-rule     { background: #b71c1c; color: #fff; border: 2px solid #ef5350; }
+  .c-phase    { background: #1565c0; color: #fff; border: 2px solid #42a5f5; }
+  .c-decision { background: #f9a825; color: #1a1a1a; border: 2px solid #ffd54f; }
+  .c-action   { background: #1b5e20; color: #c8e6c9; border: 2px solid #43a047; }
+  .c-wait     { background: #e65100; color: #fff; border: 2px solid #ff9800; }
+  .c-scale    { background: #4a148c; color: #e1bee7; border: 2px solid #9c27b0; }
+  .c-stop     { background: #37474f; color: #cfd8dc; border: 2px solid #78909c; }
+  .c-warn     { background: #bf360c; color: #fff; border: 2px solid #ff5722; }
+  .c-check    { background: #006064; color: #b2ebf2; border: 2px solid #00acc1; }
+
+  /* connectors */
+  .arrow {
+    width: 2px;
+    background: #546e7a;
+    position: relative;
+  }
+  .arrow::after {
+    content: '▼';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #546e7a;
+    font-size: 10px;
+  }
+  .arrow-label {
+    font-size: 11px;
+    color: #80cbc4;
+    font-weight: 600;
+    position: absolute;
+    left: 8px;
+  }
+
+  /* horizontal connector system */
+  .h-split {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    width: 100%;
+    position: relative;
+  }
+
+  .branch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: 0 20px;
+  }
+
+  .connector-h {
+    height: 2px;
+    background: #546e7a;
+    position: relative;
+  }
+
+  /* row layout */
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+  }
+
+  /* arrows */
+  .v-line   { width: 2px; height: 30px; background: #546e7a; }
+  .v-line-s { width: 2px; height: 18px; background: #546e7a; }
+  .v-line-l { width: 2px; height: 50px; background: #546e7a; }
+
+  .arrow-down {
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+  }
+  .arrow-down .line  { width: 2px; background: #546e7a; }
+  .arrow-down .head  { color: #546e7a; font-size: 10px; line-height: 1; }
+
+  .lbl {
+    font-size: 11px; font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .lbl-y { color: #a5d6a7; background: #1b3a1f; }
+  .lbl-n { color: #ef9a9a; background: #3b1111; }
+
+  /* SECTION DIVIDERS */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #546e7a;
+    border-top: 1px dashed #263238;
+    padding-top: 10px;
+    margin-bottom: 6px;
+    width: 1400px;
+    text-align: left;
+    padding-left: 8px;
+  }
+
+  .frame {
+    border: 1.5px dashed #1565c0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    position: relative;
+    margin: 8px 0;
+  }
+  .frame-title {
+    position: absolute;
+    top: -11px;
+    left: 12px;
+    background: #0f1117;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #42a5f5;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .frame-scale {
+    border-color: #4a148c;
+  }
+  .frame-scale .frame-title {
+    color: #ce93d8;
+  }
+
+  /* note boxes */
+  .note {
+    background: #1a1a2e;
+    border-left: 3px solid #f9a825;
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px;
+    font-size: 11.5px;
+    color: #ffe082;
+    max-width: 260px;
+    line-height: 1.5;
+  }
+  .note ul { padding-left: 14px; }
+
+  /* compound node */
+  .compound {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* dashed loop back */
+  .loop-note {
+    font-size: 10px;
+    color: #78909c;
+    font-style: italic;
+    border: 1px dashed #37474f;
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <h1>META CPAS ADS — DECISION FRAMEWORK</h1>
+  <p>Shopee Collaborative Ads | Testing → Scale Out → Scale Up → Scale Down</p>
+  <span class="badge">Updated May 2026 · Based on Meta & Shopee CPAS Best Practices</span>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-box" style="background:#263238;border:1px solid #546e7a"></div> Start / Config</div>
+  <div class="legend-item"><div class="legend-box" style="background:#b71c1c"></div> Rules Wajib</div>
+  <div class="legend-item"><div class="legend-box" style="background:#1565c0"></div> Phase / Action</div>
+  <div class="legend-item"><div class="legend-box" style="background:#f9a825"></div> Decision</div>
+  <div class="legend-item"><div class="legend-box" style="background:#1b5e20"></div> Positive Action</div>
+  <div class="legend-item"><div class="legend-box" style="background:#e65100"></div> Wait & See</div>
+  <div class="legend-item"><div class="legend-box" style="background:#4a148c"></div> Scale Up</div>
+  <div class="legend-item"><div class="legend-box" style="background:#37474f"></div> Stop / Reduce</div>
+</div>
+
+<div class="flow">
+
+<!-- ═══════════════════════════════ SETUP ═══════════════════════════════ -->
+<div class="section-label">SETUP AWAL — FONDASI SEBELUM JALAN</div>
+
+<div class="frame" style="width:1380px">
+  <div class="frame-title">FASE SETUP (Sekali Jalan — Tidak Berulang)</div>
+  <div class="row" style="gap:40px; align-items:flex-start">
+
+    <!-- START NODE -->
+    <div class="compound">
+      <div class="node pill c-start" style="min-width:200px; white-space:normal; text-align:center; font-size:12px">
+        <div>
+          <div style="font-size:13px; font-weight:800; color:#80cbc4">START HERE</div>
+          <div style="margin-top:4px">Campaign CPAS Baru</div>
+          <div style="color:#90a4ae; font-size:11px; margin-top:2px">Catalog sudah connect ke Meta</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:20px"></div>
+      <div style="color:#546e7a; font-size:10px">▼</div>
+    </div>
+
+    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
+
+    <!-- PRE-CONDITIONS -->
+    <div class="compound">
+      <div class="note" style="max-width:220px">
+        <div style="font-weight:700; color:#ffd54f; margin-bottom:4px">✓ Pre-Conditions</div>
+        <ul>
+          <li>Catalog min. 50 SKU (ideal 100+)</li>
+          <li>Listing optimal (foto, deskripsi, harga)</li>
+          <li>Pixel Shopee aktif & firing</li>
+          <li>UTM parameter sudah diset</li>
+          <li>Toko punya purchase history</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
+
+    <!-- CAMPAIGN STRUCTURE -->
+    <div class="compound">
+      <div class="node rect c-phase" style="min-width:240px; white-space:normal; font-size:12px; padding:12px 16px">
+        <div>
+          <div style="font-size:12px; font-weight:800; color:#90caf9; margin-bottom:6px">STRUKTUR CAMPAIGN AWAL</div>
+          <div style="text-align:left; font-weight:400; font-size:11px; color:#e3f2fd; line-height:1.6">
+            <b>Campaign 1 — RETARGETING</b><br>
+            Objective: Catalog Sales (Purchase)<br>
+            Audience: View Content 7–14 hari<br>
+            + ATC / Checkout 14–30 hari<br>
+            Budget: Rp50–100K/hari · CBO<br>
+            Window: 7D click + 1D view<br><br>
+            <b>Campaign 2 — PROSPECTING</b><br>
+            Objective: Catalog Sales (Purchase)<br>
+            Audience: DABA Broad / LAL Purchaser<br>
+            Budget: Rp100–200K/hari · CBO<br>
+            Window: 7D click + 1D view
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
+
+    <!-- RULES WAJIB -->
+    <div class="compound">
+      <div class="node rect c-rule" style="min-width:220px; white-space:normal; padding:12px 16px; font-size:12px">
+        <div>
+          <div style="font-weight:800; font-size:12px; margin-bottom:6px">⚠ RULES WAJIB</div>
+          <div style="text-align:left; font-weight:400; font-size:11.5px; line-height:1.6">
+            • Jangan edit campaign sebelum<br>
+            &nbsp;&nbsp;7 hari & 50 konversi/adset/minggu<br>
+            • Jangan ganti objective<br>
+            • Jangan edit budget >20% sekali<br>
+            • Jangan gabungkan retargeting<br>
+            &nbsp;&nbsp;+ prospecting dalam 1 campaign<br>
+            • Evaluasi minimal per 7 hari
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
+
+    <!-- WAIT 7 DAYS -->
+    <div class="compound">
+      <div class="node rect c-wait" style="min-width:160px; white-space:normal; text-align:center; padding:14px">
+        <div>
+          <div style="font-size:13px; font-weight:800">⏳ TUNGGU</div>
+          <div style="font-size:20px; font-weight:800; margin: 4px 0">7 HARI</div>
+          <div style="font-size:11px; font-weight:400; color:#ffe0b2">Learning phase<br>Jangan disentuh</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- arrow down -->
+<div class="arrow-down"><div class="line" style="height:24px"></div><div class="head">▼</div></div>
+<div style="font-size:11px; color:#80cbc4; font-weight:600; margin-bottom:4px">Setelah 7 hari →</div>
+
+<!-- ═══════════════════════════════ EVALUASI MINGGUAN ═══════════════════ -->
+<div class="section-label" style="margin-top:8px">EVALUASI MINGGUAN — TITIK KEPUTUSAN UTAMA</div>
+
+<!-- LEARNING PHASE CHECK -->
+<div class="frame" style="width:1380px">
+  <div class="frame-title">LAYER 1 — CEK LEARNING PHASE</div>
+  <div class="row" style="gap:32px; align-items:flex-start">
+
+    <div class="compound">
+      <div class="node rect c-check" style="min-width:200px; white-space:normal; padding:10px 14px; font-size:12px">
+        <div>
+          <div style="font-weight:800; color:#80deea">Cek Status Learning</div>
+          <div style="font-size:11px; font-weight:400; color:#b2ebf2; margin-top:4px; text-align:left">
+            Di Ads Manager:<br>
+            • Learning = masih belajar<br>
+            • Active = sudah stabil<br>
+            • Learning Limited = masalah
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="color:#546e7a; font-size:20px; padding-top:30px">→</div>
+
+    <!-- DECISION DIAMOND: 50 conversions? -->
+    <div class="compound" style="position:relative">
+      <div class="node diamond c-decision">
+        <div class="label" style="font-size:11px; line-height:1.4">50 konversi<br>/adset<br>/minggu?</div>
+      </div>
+    </div>
+
+    <!-- YES BRANCH -->
+    <div class="compound">
+      <div class="lbl lbl-y" style="font-size:11px; margin-bottom:6px">YA — Learning selesai</div>
+      <div class="node rect c-action" style="min-width:170px; white-space:normal; padding:10px 14px; font-size:12px">
+        <div>
+          <div style="font-weight:800">✓ Learning Phase Exit</div>
+          <div style="font-size:11px; font-weight:400; margin-top:4px; text-align:left">
+            Lanjut ke Layer 2<br>(Evaluasi ROAS)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NO BRANCH -->
+    <div class="compound">
+      <div class="lbl lbl-n" style="font-size:11px; margin-bottom:6px">TIDAK</div>
+      <div class="node rect c-decision" style="min-width:170px; white-space:normal; padding:10px 14px; font-size:12px; background:#5d4037; border-color:#a1887f; color:#efebe9">
+        <div>
+          <div style="font-weight:800">Learning Limited?</div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+      <div class="row" style="gap:16px">
+        <div class="compound">
+          <div class="lbl lbl-y" style="font-size:10px; margin-bottom:4px">YA</div>
+          <div class="node rect c-rule" style="min-width:150px; white-space:normal; padding:8px 12px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Fix Learning Limited</div>
+              <div style="font-weight:400; margin-top:3px; text-align:left">
+                1. Naikkan budget<br>
+                2. Perluas audience<br>
+                3. Merge adset sejenis<br>
+                4. Ganti event ke ATC<br>
+                &nbsp;&nbsp;&nbsp;(jika purchase terlalu jarang)
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="compound">
+          <div class="lbl lbl-n" style="font-size:10px; margin-bottom:4px">TIDAK</div>
+          <div class="node rect c-wait" style="min-width:130px; white-space:normal; padding:8px 12px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Wait & See</div>
+              <div style="font-weight:400; margin-top:3px">7 hari lagi<br>Jangan disentuh</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- arrow down -->
+<div class="arrow-down"><div class="line" style="height:20px"></div><div class="head">▼</div></div>
+<div style="font-size:11px; color:#80cbc4; font-weight:600; margin:2px 0">Learning phase sudah exit →</div>
+<div class="arrow-down"><div class="line" style="height:12px"></div><div class="head">▼</div></div>
+
+<!-- ═══════════════════ LAYER 2: EVALUASI ROAS ═══════════════════ -->
+<div class="frame" style="width:1380px; margin-top:4px">
+  <div class="frame-title">LAYER 2 — EVALUASI ROAS (Data 1 Minggu, Bukan Harian)</div>
+
+  <div class="row" style="gap:0px; align-items:flex-start">
+
+    <!-- RETARGETING ROAS -->
+    <div class="compound" style="padding: 0 16px; border-right: 1px dashed #263238">
+      <div style="font-size:11px; font-weight:700; color:#42a5f5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">RETARGETING Campaign</div>
+
+      <div class="node rect c-check" style="min-width:170px; white-space:normal; padding:9px 12px; font-size:11.5px">
+        <div>
+          <div style="font-weight:800; color:#80deea">Hitung ROAS<br>7 Hari Terakhir</div>
+          <div style="font-size:10.5px; font-weight:400; margin-top:3px">Ambil dari Meta Ads Manager<br>Attribution: 7D click + 1D view</div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+
+      <!-- gap ROAS retargeting -->
+      <div class="node diamond c-decision" style="width:120px; height:120px">
+        <div class="label" style="font-size:10.5px">Gap ROAS<br>retargeting<br>&gt;30%?</div>
+      </div>
+
+      <!-- 3 paths -->
+      <div class="row" style="gap:10px; margin-top:10px; align-items:flex-start">
+        <!-- GAP > 30%: turunkan target -->
+        <div class="compound">
+          <div class="lbl lbl-y" style="font-size:10px; margin-bottom:4px">YA &gt;30%</div>
+          <div class="node rect c-rule" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Turunkan Target ROAS</div>
+              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
+                Max. turun 20–30%<br>
+                Beri ruang sistem<br>
+                Wait 7 hari
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- GAP 10-30%: wait -->
+        <div class="compound">
+          <div class="lbl" style="font-size:10px; margin-bottom:4px; background:#1a237e; color:#90caf9; padding:1px 6px; border-radius:4px">10–30%</div>
+          <div class="node rect c-wait" style="min-width:110px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Wait & See</div>
+              <div style="font-weight:400; margin-top:2px; font-size:10.5px">7 hari lagi</div>
+            </div>
+          </div>
+        </div>
+        <!-- GAP < 10% (ACHIEVE) -->
+        <div class="compound">
+          <div class="lbl lbl-n" style="font-size:10px; margin-bottom:4px">&lt;10% ACHIEVE!</div>
+          <div class="node rect c-action" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">✓ ROAS Achieve</div>
+              <div style="font-weight:400; margin-top:2px; font-size:10.5px">
+                Lanjut ke<br>Scale Decision
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROSPECTING ROAS -->
+    <div class="compound" style="padding: 0 16px">
+      <div style="font-size:11px; font-weight:700; color:#ce93d8; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">PROSPECTING Campaign</div>
+
+      <div class="node rect c-check" style="min-width:170px; white-space:normal; padding:9px 12px; font-size:11.5px; background:#00363a; border-color:#0097a7">
+        <div>
+          <div style="font-weight:800; color:#80deea">Hitung ROAS<br>7 Hari Terakhir</div>
+          <div style="font-size:10.5px; font-weight:400; margin-top:3px">Prospecting baseline<br>biasanya lebih rendah dari retargeting</div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+
+      <!-- Prospecting ROAS check -->
+      <div class="node diamond c-decision" style="width:120px; height:120px; background:#6a1b9a; border-color:#ba68c8">
+        <div class="label" style="font-size:10.5px">ROAS<br>Prospecting<br>positif?</div>
+      </div>
+
+      <div class="row" style="gap:10px; margin-top:10px; align-items:flex-start">
+        <!-- YES -->
+        <div class="compound">
+          <div class="lbl lbl-y" style="font-size:10px; margin-bottom:4px">YA &gt; 1x</div>
+          <div class="node rect c-action" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px; background:#1a3a1f">
+            <div>
+              <div style="font-weight:800">Prospecting Oke</div>
+              <div style="font-weight:400; margin-top:2px; font-size:10.5px">
+                Funnel berjalan<br>Lanjut evaluasi<br>mingguan
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- NO — demand issue -->
+        <div class="compound">
+          <div class="lbl lbl-n" style="font-size:10px; margin-bottom:4px">TIDAK &lt; 1x</div>
+          <div class="node rect c-warn" style="min-width:140px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">⚠ Demand Issue?</div>
+              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
+                Cek:<br>
+                • Listing quality<br>
+                • Harga kompetitif?<br>
+                • Review cukup?<br>
+                • CTR vs CVR gap?
+              </div>
+            </div>
+          </div>
+          <div class="v-line-s"></div>
+          <div class="row" style="gap:8px">
+            <div class="compound">
+              <div class="lbl lbl-n" style="font-size:9px; margin-bottom:3px">Listing buruk</div>
+              <div class="node rect c-stop" style="min-width:100px; white-space:normal; padding:6px 8px; font-size:10.5px">
+                <div>Fix listing dulu<br>Pause prospecting</div>
+              </div>
+            </div>
+            <div class="compound">
+              <div class="lbl lbl-y" style="font-size:9px; margin-bottom:3px">Listing oke</div>
+              <div class="node rect c-wait" style="min-width:100px; white-space:normal; padding:6px 8px; font-size:10.5px">
+                <div>Uji creative baru<br>Wait 7 hari</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- arrow down -->
+<div class="arrow-down"><div class="line" style="height:20px"></div><div class="head">▼</div></div>
+<div style="font-size:11px; color:#80cbc4; font-weight:600; margin:2px 0">ROAS Achieve & Campaign Stabil →</div>
+<div class="arrow-down"><div class="line" style="height:12px"></div><div class="head">▼</div></div>
+
+<!-- ═══════════════════ LAYER 3: SCALE DECISION ═══════════════════ -->
+<div class="section-label" style="margin-top:4px">SCALE DECISION — KAPAN DAN BAGAIMANA SCALE</div>
+
+<div class="frame frame-scale" style="width:1380px">
+  <div class="frame-title" style="color:#ce93d8">LAYER 3 — SCALE FRAMEWORK (3 Kondisi)</div>
+
+  <div class="row" style="gap:0; align-items:flex-start">
+
+    <!-- SCALE UP (Vertical) -->
+    <div class="compound" style="padding: 0 20px; border-right: 1px dashed #4a148c; min-width:360px">
+      <div style="font-size:11px; font-weight:700; color:#ce93d8; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">📈 SCALE UP — Volume Lebih Besar</div>
+
+      <div class="node rect c-check" style="min-width:280px; white-space:normal; padding:9px 14px; font-size:12px">
+        <div>
+          <div style="font-weight:800; color:#80deea">Syarat Scale Up (Semua harus terpenuhi)</div>
+          <div style="font-size:11px; font-weight:400; margin-top:4px; text-align:left; color:#b2ebf2">
+            ✓ ROAS Achieve (gap &lt;10%) selama 1 minggu<br>
+            ✓ Learning phase sudah exit<br>
+            ✓ Spending stabil, tidak ada spike aneh<br>
+            ✓ Tidak ada perubahan lain 7 hari terakhir
+          </div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+
+      <div class="row" style="gap:14px; align-items:flex-start">
+        <div class="compound">
+          <div style="font-size:10.5px; font-weight:700; color:#ce93d8; margin-bottom:4px">Opsi A — Budget Scale</div>
+          <div class="node rect c-scale" style="min-width:150px; white-space:normal; padding:9px 12px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Naikkan Budget</div>
+              <div style="font-weight:400; margin-top:4px; text-align:left">
+                +15–20% setiap kali<br>
+                Jangan >20% sekaligus<br>
+                Tunggu 3 hari setelah<br>
+                setiap kenaikan<br><br>
+                Atau: Duplicate campaign<br>
+                (lebih aman, no reset)
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="compound">
+          <div style="font-size:10.5px; font-weight:700; color:#ce93d8; margin-bottom:4px">Opsi B — Expand Audience</div>
+          <div class="node rect c-scale" style="min-width:150px; white-space:normal; padding:9px 12px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Scale Out Audience</div>
+              <div style="font-weight:400; margin-top:4px; text-align:left">
+                • Perluas LAL: 1% → 2–3%<br>
+                • Tambah ATC window lebih luas<br>
+                &nbsp;&nbsp;(30 → 60 hari)<br>
+                • Add upsell/cross-sell adset<br>
+                • Satu perubahan per minggu
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-line-s"></div>
+      <div class="node rect c-wait" style="min-width:280px; white-space:normal; padding:8px 14px; font-size:11px">
+        <div>
+          <div style="font-weight:800">Setelah Scale: Wait & See 7 Hari</div>
+          <div style="font-weight:400; margin-top:2px; font-size:10.5px">Jangan ubah apapun lagi sebelum 7 hari berikutnya</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STABLE / MAINTAIN -->
+    <div class="compound" style="padding: 0 20px; border-right: 1px dashed #4a148c; min-width:320px">
+      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">⚖️ MAINTAIN — Jaga Performa</div>
+
+      <div class="node rect c-action" style="min-width:260px; white-space:normal; padding:9px 14px; font-size:12px">
+        <div>
+          <div style="font-weight:800">Kondisi Ideal — Maintain Mode</div>
+          <div style="font-size:11px; font-weight:400; margin-top:4px; text-align:left">
+            ROAS achieve + volume cukup + spending stabil
+          </div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+
+      <div class="node rect c-phase" style="min-width:260px; white-space:normal; padding:9px 14px; font-size:11px">
+        <div>
+          <div style="font-weight:800">Yang perlu dilakukan rutin:</div>
+          <div style="font-weight:400; margin-top:4px; text-align:left; line-height:1.6">
+            • Refresh creative setiap 10–14 hari<br>
+            &nbsp;&nbsp;(untuk hindari ad fatigue)<br>
+            • Monitor CTR — kalau drop, creative baru<br>
+            • Monitor audience saturation<br>
+            • Evaluasi mingguan tetap jalan<br>
+            • Tambah SKU ke catalog kalau ada produk baru
+          </div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+      <div class="node rect c-wait" style="min-width:260px; white-space:normal; padding:8px 14px; font-size:11px">
+        <div>
+          <div style="font-weight:800">Tetap evaluasi tiap 7 hari</div>
+          <div style="font-weight:400; margin-top:2px; font-size:10.5px">Kalau stabil terus → pertimbangkan scale up</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCALE DOWN / TROUBLE -->
+    <div class="compound" style="padding: 0 20px; min-width:380px">
+      <div style="font-size:11px; font-weight:700; color:#ef9a9a; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">📉 SCALE DOWN / TROUBLE SHOOT</div>
+
+      <div class="node rect c-decision" style="min-width:320px; white-space:normal; padding:9px 14px; font-size:12px">
+        <div>
+          <div style="font-weight:800">Identifikasi Masalah</div>
+        </div>
+      </div>
+      <div class="v-line-s"></div>
+
+      <div class="row" style="gap:10px; align-items:flex-start">
+
+        <div class="compound">
+          <div style="font-size:10px; font-weight:700; color:#ef9a9a; margin-bottom:4px; text-align:center">ROAS DROP<br>setelah scale</div>
+          <div class="node rect c-warn" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Scale Terlalu Agresif</div>
+              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
+                • Turunkan budget ke level stabil<br>
+                • Jangan turun >20% sekaligus<br>
+                • Wait 7 hari
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compound">
+          <div style="font-size:10px; font-weight:700; color:#ef9a9a; margin-bottom:4px; text-align:center">ROAS DROP<br>tiba-tiba tanpa scale</div>
+          <div class="node rect c-warn" style="min-width:140px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Cek Penyebab</div>
+              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
+                • Ad fatigue? CTR drop?<br>
+                → Ganti creative<br>
+                • Audience saturasi?<br>
+                → Expand audience<br>
+                • Kompetitor lebih agresif?<br>
+                → Review harga/voucher<br>
+                • Listing berubah?<br>
+                → Fix listing dulu
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compound">
+          <div style="font-size:10px; font-weight:700; color:#ef9a9a; margin-bottom:4px; text-align:center">TIDAK ADA<br>konversi &gt;14 hari</div>
+          <div class="node rect c-stop" style="min-width:120px; white-space:normal; padding:7px 10px; font-size:11px">
+            <div>
+              <div style="font-weight:800">Evaluasi Produk</div>
+              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
+                Jika semua sudah OK:<br>
+                listing, harga, creative<br>
+                → Pause campaign<br>
+                Masalah ada di produk,<br>bukan iklan
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ CREATIVE & AUDIENCE REFRESH ═══════════════════ -->
+<div class="arrow-down"><div class="line" style="height:20px"></div><div class="head">▼</div></div>
+
+<div class="section-label" style="margin-top:4px">CREATIVE & AUDIENCE REFRESH — JALAN TERUS SETIAP 2 MINGGU</div>
+
+<div class="frame" style="width:1380px; border-color:#00796b">
+  <div class="frame-title" style="color:#80cbc4">LAYER 4 — CREATIVE MANAGEMENT & AUDIENCE HEALTH</div>
+
+  <div class="row" style="gap:32px; align-items:flex-start">
+
+    <div class="compound">
+      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:6px">CREATIVE REFRESH (setiap 10–14 hari)</div>
+      <div class="node rect c-phase" style="min-width:300px; white-space:normal; padding:10px 14px; font-size:11px; background:#004d40; border-color:#009688">
+        <div>
+          <div style="font-weight:400; text-align:left; line-height:1.7">
+            <b>Trigger ganti creative:</b><br>
+            • CTR turun &gt;20% dari rata-rata<br>
+            • Frequency &gt;5x dalam 7 hari (retargeting)<br>
+            • ROAS mulai drop meski budget sama<br><br>
+            <b>Format rekomendasi:</b><br>
+            • Carousel: retargeting SKU spesifik<br>
+            • Collection: DABA prospecting<br>
+            • Video (ACV): broad prospecting<br>
+            • Static: flash promo / event
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compound">
+      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:6px">AUDIENCE HEALTH CHECK (tiap minggu)</div>
+      <div class="node rect c-phase" style="min-width:300px; white-space:normal; padding:10px 14px; font-size:11px; background:#004d40; border-color:#009688">
+        <div>
+          <div style="font-weight:400; text-align:left; line-height:1.7">
+            <b>Retargeting:</b><br>
+            • Audience &lt;5.000? → Perluas window (7 → 14 hari)<br>
+            • Frequency tinggi → Exclude purchaser lebih agresif<br>
+            • Saturation? → Tambah SKU ke catalog<br><br>
+            <b>Prospecting:</b><br>
+            • Refresh LAL dari purchaser terbaru (setiap 30 hari)<br>
+            • DABA broad → biarkan Meta pilih, jangan filter berlebihan<br>
+            • Jangan narrow dengan interest/city/age kecuali ada alasan kuat
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compound">
+      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:6px">DATA DELAY — PENTING!</div>
+      <div class="note" style="max-width:260px; border-color:#f9a825">
+        <div style="font-weight:700; color:#ffd54f; margin-bottom:6px">⏱ CPAS Data Delay</div>
+        <ul style="font-size:11px; line-height:1.7">
+          <li>Data konversi dari Shopee ke Meta: <b>delay 24–48 jam</b></li>
+          <li>Jangan evaluasi data hari ini → evaluasi data 2 hari lalu</li>
+          <li>Kalau ROAS kelihatan sangat rendah hari ini → cek lagi besok</li>
+          <li>Window evaluasi: ambil data <b>7 hari, minus 2 hari terakhir</b></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- footer note -->
+<div style="margin-top:28px; text-align:center; color:#546e7a; font-size:11px; border-top:1px dashed #263238; padding-top:14px; width:1380px">
+  Framework ini hanya bekerja jika dijalankan sebagai aturan, bukan referensi. Evaluasi per 7 hari, satu perubahan per siklus, dan jangan reaktif terhadap data harian.
+  <br>Dibuat berdasarkan: Meta CPAS Best Practices, Shopee Collaborative Ads Training, Meta Learning Phase Guidelines 2025–2026.
+</div>
+
+</div><!-- end .flow -->
+</body>
+</html>
