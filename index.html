@@ -2,838 +2,852 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Lifespan Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #0f1117;
-    font-family: 'Segoe UI', sans-serif;
-    padding: 40px;
-    min-width: 1800px;
-  }
+:root{
+  --bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;
+  --border:#2a2a2a;--border2:#333;
+  --text:#e8e8e8;--text2:#888;--text3:#555;
+  --accent:#c8f77a;--accent-dim:#c8f77a22;--accent-text:#0f0f0f;
+  --up:#4ade80;--up-bg:#4ade8015;
+  --out:#fbbf24;--out-bg:#fbbf2415;
+  --monitor:#60a5fa;--monitor-bg:#60a5fa15;
+  --kill:#f87171;--kill-bg:#f8717115;
+  --upcoming:#a78bfa;--upcoming-bg:#a78bfa15;
+  --viewer:#38bdf8;--viewer-bg:#38bdf815;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:8px;--r-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6}
+body{min-height:100vh}
 
-  .title-block {
-    text-align: center;
-    margin-bottom: 36px;
-  }
-  .title-block h1 {
-    font-size: 28px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 1px;
-  }
-  .title-block p {
-    color: #888;
-    font-size: 13px;
-    margin-top: 4px;
-  }
-  .badge {
-    display: inline-block;
-    background: #1565c0;
-    color: #fff;
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    margin-top: 8px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
+/* ── Auth screen ── */
+#auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:0}
+.auth-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2.5rem;width:100%;max-width:380px;text-align:center}
+.auth-logo{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+.auth-title{font-size:20px;font-weight:600;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text3);margin-bottom:2rem}
+.auth-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
+.mode-btn{padding:1rem;border-radius:var(--r-lg);border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all 0.15s;text-align:center}
+.mode-btn:hover{border-color:var(--accent)}
+.mode-btn.selected{border-color:var(--accent);background:var(--accent-dim)}
+.mode-btn .mode-icon{font-size:22px;margin-bottom:6px}
+.mode-btn .mode-label{font-size:13px;font-weight:500;color:var(--text)}
+.mode-btn .mode-desc{font-size:11px;color:var(--text3);margin-top:2px}
+.auth-pw-wrap{margin-bottom:1rem}
+.auth-pw-wrap input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--mono);text-align:center;letter-spacing:0.08em;outline:none;transition:border-color 0.15s}
+.auth-pw-wrap input:focus{border-color:var(--accent)}
+.auth-err{font-size:12px;color:var(--kill);font-family:var(--mono);margin-bottom:10px;min-height:18px}
+.auth-enter{width:100%;padding:10px;border-radius:var(--r);border:none;background:var(--accent);color:var(--accent-text);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity 0.15s}
+.auth-enter:hover{opacity:0.88}
+.auth-hint{font-size:11px;color:var(--text3);margin-top:1rem;font-family:var(--mono)}
 
-  /* ── LEGEND ── */
-  .legend {
-    display: flex;
-    gap: 18px;
-    justify-content: center;
-    margin-bottom: 32px;
-    flex-wrap: wrap;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    color: #ccc;
-  }
-  .legend-box {
-    width: 20px; height: 16px;
-    border-radius: 4px;
-  }
+/* ── Mode bar ── */
+#mode-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 1.5rem;background:var(--bg2);border-bottom:1px solid var(--border);font-size:12px;font-family:var(--mono)}
+.mode-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:500}
+.mode-pill.admin{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);}
+.mode-pill.viewer{background:var(--viewer-bg);color:var(--viewer);border:1px solid var(--viewer)}
+.mode-bar-right{display:flex;align-items:center;gap:10px}
 
-  /* ── FLOW CANVAS ── */
-  .flow {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    position: relative;
-  }
+/* ── Layout ── */
+.layout{display:flex;min-height:calc(100vh - 41px)}
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);padding:1.5rem 0;display:flex;flex-direction:column;position:sticky;top:41px;height:calc(100vh - 41px);overflow-y:auto}
+.main{flex:1;padding:2rem;overflow:hidden}
+.logo{padding:0 1.25rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem}
+.logo span{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase}
+.logo h1{font-size:15px;font-weight:600;color:var(--text);margin-top:2px}
+nav{flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.25rem;cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.15s;border-left:2px solid transparent;user-select:none}
+.nav-item:hover{color:var(--text);background:var(--bg3)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-dim)}
+.nav-item.admin-only{display:none}
+.nav-item.admin-only.visible{display:flex}
+.nav-icon{width:16px;height:16px;opacity:0.7;flex-shrink:0}
+.nav-item.active .nav-icon{opacity:1}
+.sidebar-footer{padding:1.25rem;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-family:var(--mono)}
 
-  /* ── NODE STYLES ── */
-  .node {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-size: 12.5px;
-    font-weight: 600;
-    line-height: 1.35;
-    padding: 10px 14px;
-    position: relative;
-    white-space: nowrap;
-  }
+/* ── Sections ── */
+.section{display:none}.section.active{display:block}
+.page-header{margin-bottom:2rem;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+.page-header-text h2{font-size:22px;font-weight:600;color:var(--text)}
+.page-header-text p{color:var(--text2);font-size:13px;margin-top:4px}
 
-  /* shapes */
-  .pill       { border-radius: 999px; min-width: 160px; padding: 10px 20px; }
-  .rect       { border-radius: 8px;   min-width: 160px; }
-  .diamond    { transform: rotate(45deg); width: 130px; height: 130px; }
-  .diamond .label { transform: rotate(-45deg); font-size: 12px; font-weight: 700; }
-  .hexagon    { border-radius: 8px; min-width: 170px; clip-path: polygon(12% 0%, 88% 0%, 100% 50%, 88% 100%, 12% 100%, 0% 50%); padding: 12px 28px; }
-  .octagon    { border-radius: 8px; min-width: 150px; clip-path: polygon(20% 0%,80% 0%,100% 20%,100% 80%,80% 100%,20% 100%,0% 80%,0% 20%); padding: 14px 20px; }
+/* ── Cards ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;font-family:var(--mono)}
 
-  /* colors */
-  .c-start    { background: #263238; color: #eceff1; border: 2px solid #546e7a; }
-  .c-rule     { background: #b71c1c; color: #fff; border: 2px solid #ef5350; }
-  .c-phase    { background: #1565c0; color: #fff; border: 2px solid #42a5f5; }
-  .c-decision { background: #f9a825; color: #1a1a1a; border: 2px solid #ffd54f; }
-  .c-action   { background: #1b5e20; color: #c8e6c9; border: 2px solid #43a047; }
-  .c-wait     { background: #e65100; color: #fff; border: 2px solid #ff9800; }
-  .c-scale    { background: #4a148c; color: #e1bee7; border: 2px solid #9c27b0; }
-  .c-stop     { background: #37474f; color: #cfd8dc; border: 2px solid #78909c; }
-  .c-warn     { background: #bf360c; color: #fff; border: 2px solid #ff5722; }
-  .c-check    { background: #006064; color: #b2ebf2; border: 2px solid #00acc1; }
+/* ── Metrics ── */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+.metric .lbl{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:6px}
+.metric .val{font-size:24px;font-weight:600;color:var(--text);line-height:1}
+.metric .sub{font-size:11px;color:var(--text3);margin-top:4px}
 
-  /* connectors */
-  .arrow {
-    width: 2px;
-    background: #546e7a;
-    position: relative;
-  }
-  .arrow::after {
-    content: '▼';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: #546e7a;
-    font-size: 10px;
-  }
-  .arrow-label {
-    font-size: 11px;
-    color: #80cbc4;
-    font-weight: 600;
-    position: absolute;
-    left: 8px;
-  }
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500;font-family:var(--mono)}
+.badge-up{background:var(--up-bg);color:var(--up)}
+.badge-out{background:var(--out-bg);color:var(--out)}
+.badge-monitor{background:var(--monitor-bg);color:var(--monitor)}
+.badge-kill{background:var(--kill-bg);color:var(--kill)}
+.badge-neutral{background:var(--bg3);color:var(--text3)}
 
-  /* horizontal connector system */
-  .h-split {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 0;
-    width: 100%;
-    position: relative;
-  }
+/* ── Tables ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:10px;font-weight:500;color:var(--text3);font-family:var(--mono);letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border2);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+td.mono{font-family:var(--mono);font-size:12px}
 
-  .branch {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    padding: 0 20px;
-  }
+/* ── Forms ── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.25rem}
+.field label{display:block;font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;font-size:13px;color:var(--text);font-family:var(--font);transition:border-color 0.15s;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field select{cursor:pointer}.field select option{background:var(--bg3)}
+.field textarea{resize:vertical;min-height:70px}
 
-  .connector-h {
-    height: 2px;
-    background: #546e7a;
-    position: relative;
-  }
+/* ── Buttons ── */
+.btn{padding:8px 16px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:13px;font-family:var(--font);cursor:pointer;transition:all 0.15s}
+.btn:hover{background:var(--bg3);color:var(--text)}
+.btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.btn-primary:hover{opacity:0.88;background:var(--accent)}
+.btn-danger{color:var(--kill);border-color:transparent}
+.btn-danger:hover{background:var(--kill-bg);border-color:var(--kill)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.admin-action{display:none}.admin-action.visible{display:inline-flex}
+.admin-action-block{display:none}.admin-action-block.visible{display:block}
 
-  /* row layout */
-  .row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    justify-content: center;
-  }
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 16px;border-radius:var(--r);font-size:13px;opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:999;font-family:var(--mono)}
+#toast.show{opacity:1}
+#toast.ok{border-color:var(--up);color:var(--up)}
+#toast.err{border-color:var(--kill);color:var(--kill)}
 
-  /* arrows */
-  .v-line   { width: 2px; height: 30px; background: #546e7a; }
-  .v-line-s { width: 2px; height: 18px; background: #546e7a; }
-  .v-line-l { width: 2px; height: 50px; background: #546e7a; }
+/* ── Lifespan ── */
+.lifespan-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border2)}
+.lifespan-row:last-child{border-bottom:none}
+.lsr-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.lsr-info{flex:1;min-width:0}
+.lsr-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lsr-meta{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.age-bar{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:6px}
+.age-fill{height:100%;border-radius:2px;transition:width 0.4s}
+.lsr-right{text-align:right;flex-shrink:0}
+.trend-up{color:var(--up);font-size:11px;font-family:var(--mono)}
+.trend-dn{color:var(--kill);font-size:11px;font-family:var(--mono)}
+.trend-fl{color:var(--text3);font-size:11px;font-family:var(--mono)}
 
-  .arrow-down {
-    display: flex; flex-direction: column; align-items: center; gap: 0;
-  }
-  .arrow-down .line  { width: 2px; background: #546e7a; }
-  .arrow-down .head  { color: #546e7a; font-size: 10px; line-height: 1; }
+/* ── Phase ── */
+.phase-tag{font-size:10px;font-weight:500;font-family:var(--mono);padding:2px 6px;border-radius:3px}
+.phase-peak{background:#4ade8020;color:var(--up)}
+.phase-growing{background:#60a5fa20;color:var(--monitor)}
+.phase-declining{background:#fbbf2420;color:var(--out)}
+.phase-dead{background:#f8717120;color:var(--kill)}
+.phase-testing{background:#e8e8e820;color:var(--text2)}
 
-  .lbl {
-    font-size: 11px; font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 4px;
-  }
-  .lbl-y { color: #a5d6a7; background: #1b3a1f; }
-  .lbl-n { color: #ef9a9a; background: #3b1111; }
+/* ── History ── */
+.hist-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem}
+.hist-warning{background:var(--out-bg);border:1px solid var(--out);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--out);margin-bottom:1rem;font-family:var(--mono)}
 
-  /* SECTION DIVIDERS */
-  .section-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #546e7a;
-    border-top: 1px dashed #263238;
-    padding-top: 10px;
-    margin-bottom: 6px;
-    width: 1400px;
-    text-align: left;
-    padding-left: 8px;
-  }
+/* ── Upcoming cards ── */
+.upcoming-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:1rem}
+.upcoming-card{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-lg);padding:1rem;position:relative;transition:border-color 0.15s}
+.upcoming-card:hover{border-color:var(--upcoming)}
+.upcoming-card .uc-hook{font-size:10px;font-family:var(--mono);color:var(--upcoming);margin-bottom:6px}
+.upcoming-card .uc-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.upcoming-card .uc-product{font-size:12px;color:var(--text3);margin-bottom:8px}
+.upcoming-card .uc-tags{display:flex;gap:6px;flex-wrap:wrap}
+.uc-tag{font-size:10px;background:var(--bg4);color:var(--text3);padding:2px 6px;border-radius:3px;font-family:var(--mono)}
+.uc-actions{position:absolute;top:10px;right:10px;display:flex;gap:4px}
 
-  .frame {
-    border: 1.5px dashed #1565c0;
-    border-radius: 12px;
-    padding: 16px 20px;
-    position: relative;
-    margin: 8px 0;
-  }
-  .frame-title {
-    position: absolute;
-    top: -11px;
-    left: 12px;
-    background: #0f1117;
-    padding: 0 8px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #42a5f5;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .frame-scale {
-    border-color: #4a148c;
-  }
-  .frame-scale .frame-title {
-    color: #ce93d8;
-  }
+/* ── Chart ── */
+.chart-wrap{position:relative;width:100%}
 
-  /* note boxes */
-  .note {
-    background: #1a1a2e;
-    border-left: 3px solid #f9a825;
-    border-radius: 0 6px 6px 0;
-    padding: 8px 12px;
-    font-size: 11.5px;
-    color: #ffe082;
-    max-width: 260px;
-    line-height: 1.5;
-  }
-  .note ul { padding-left: 14px; }
+/* ── Empty ── */
+.empty{text-align:center;padding:3rem 0;color:var(--text3);font-size:13px}
+.empty span{display:block;font-size:24px;margin-bottom:8px}
 
-  /* compound node */
-  .compound {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+/* ── Viewer notice ── */
+.viewer-notice{background:var(--viewer-bg);border:1px solid var(--viewer);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--viewer);font-family:var(--mono);margin-bottom:1.25rem;display:none}
+.viewer-notice.show{display:block}
 
-  /* dashed loop back */
-  .loop-note {
-    font-size: 10px;
-    color: #78909c;
-    font-style: italic;
-    border: 1px dashed #37474f;
-    border-radius: 4px;
-    padding: 2px 8px;
-  }
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-lg);padding:1.5rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;padding:0}
+.modal-close:hover{color:var(--text)}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);padding:0.75rem 0}
+  nav{display:flex;overflow-x:auto;padding:0 0.5rem}
+  .nav-item{border-left:none;border-bottom:2px solid transparent;padding:8px 12px;white-space:nowrap;flex-shrink:0}
+  .nav-item.active{border-left:none;border-bottom-color:var(--accent)}
+  .sidebar-footer,.logo{display:none}
+  .main{padding:1rem}
+}
 </style>
 </head>
 <body>
 
-<div class="title-block">
-  <h1>META CPAS ADS — DECISION FRAMEWORK</h1>
-  <p>Shopee Collaborative Ads | Testing → Scale Out → Scale Up → Scale Down</p>
-  <span class="badge">Updated May 2026 · Based on Meta & Shopee CPAS Best Practices</span>
-</div>
-
-<!-- LEGEND -->
-<div class="legend">
-  <div class="legend-item"><div class="legend-box" style="background:#263238;border:1px solid #546e7a"></div> Start / Config</div>
-  <div class="legend-item"><div class="legend-box" style="background:#b71c1c"></div> Rules Wajib</div>
-  <div class="legend-item"><div class="legend-box" style="background:#1565c0"></div> Phase / Action</div>
-  <div class="legend-item"><div class="legend-box" style="background:#f9a825"></div> Decision</div>
-  <div class="legend-item"><div class="legend-box" style="background:#1b5e20"></div> Positive Action</div>
-  <div class="legend-item"><div class="legend-box" style="background:#e65100"></div> Wait & See</div>
-  <div class="legend-item"><div class="legend-box" style="background:#4a148c"></div> Scale Up</div>
-  <div class="legend-item"><div class="legend-box" style="background:#37474f"></div> Stop / Reduce</div>
-</div>
-
-<div class="flow">
-
-<!-- ═══════════════════════════════ SETUP ═══════════════════════════════ -->
-<div class="section-label">SETUP AWAL — FONDASI SEBELUM JALAN</div>
-
-<div class="frame" style="width:1380px">
-  <div class="frame-title">FASE SETUP (Sekali Jalan — Tidak Berulang)</div>
-  <div class="row" style="gap:40px; align-items:flex-start">
-
-    <!-- START NODE -->
-    <div class="compound">
-      <div class="node pill c-start" style="min-width:200px; white-space:normal; text-align:center; font-size:12px">
-        <div>
-          <div style="font-size:13px; font-weight:800; color:#80cbc4">START HERE</div>
-          <div style="margin-top:4px">Campaign CPAS Baru</div>
-          <div style="color:#90a4ae; font-size:11px; margin-top:2px">Catalog sudah connect ke Meta</div>
-        </div>
+<!-- ── AUTH SCREEN ── -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">Performance Tracker</div>
+    <div class="auth-title">Content Lifespan Tracker</div>
+    <div class="auth-sub">Pilih mode akses</div>
+    <div class="auth-modes">
+      <div class="mode-btn selected" id="mode-viewer-btn" onclick="selectMode('viewer')">
+        <div class="mode-icon">👁️</div>
+        <div class="mode-label">Viewer</div>
+        <div class="mode-desc">Lihat data saja</div>
       </div>
-      <div class="v-line" style="height:20px"></div>
-      <div style="color:#546e7a; font-size:10px">▼</div>
-    </div>
-
-    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
-
-    <!-- PRE-CONDITIONS -->
-    <div class="compound">
-      <div class="note" style="max-width:220px">
-        <div style="font-weight:700; color:#ffd54f; margin-bottom:4px">✓ Pre-Conditions</div>
-        <ul>
-          <li>Catalog min. 50 SKU (ideal 100+)</li>
-          <li>Listing optimal (foto, deskripsi, harga)</li>
-          <li>Pixel Shopee aktif & firing</li>
-          <li>UTM parameter sudah diset</li>
-          <li>Toko punya purchase history</li>
-        </ul>
+      <div class="mode-btn" id="mode-admin-btn" onclick="selectMode('admin')">
+        <div class="mode-icon">⚙️</div>
+        <div class="mode-label">Admin</div>
+        <div class="mode-desc">Edit & kelola data</div>
       </div>
     </div>
-
-    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
-
-    <!-- CAMPAIGN STRUCTURE -->
-    <div class="compound">
-      <div class="node rect c-phase" style="min-width:240px; white-space:normal; font-size:12px; padding:12px 16px">
-        <div>
-          <div style="font-size:12px; font-weight:800; color:#90caf9; margin-bottom:6px">STRUKTUR CAMPAIGN AWAL</div>
-          <div style="text-align:left; font-weight:400; font-size:11px; color:#e3f2fd; line-height:1.6">
-            <b>Campaign 1 — RETARGETING</b><br>
-            Objective: Catalog Sales (Purchase)<br>
-            Audience: View Content 7–14 hari<br>
-            + ATC / Checkout 14–30 hari<br>
-            Budget: Rp50–100K/hari · CBO<br>
-            Window: 7D click + 1D view<br><br>
-            <b>Campaign 2 — PROSPECTING</b><br>
-            Objective: Catalog Sales (Purchase)<br>
-            Audience: DABA Broad / LAL Purchaser<br>
-            Budget: Rp100–200K/hari · CBO<br>
-            Window: 7D click + 1D view
-          </div>
-        </div>
+    <div id="pw-section" style="display:none">
+      <div class="auth-pw-wrap">
+        <input type="password" id="pw-input" placeholder="Password admin" onkeydown="if(event.key==='Enter')enterApp()">
       </div>
     </div>
-
-    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
-
-    <!-- RULES WAJIB -->
-    <div class="compound">
-      <div class="node rect c-rule" style="min-width:220px; white-space:normal; padding:12px 16px; font-size:12px">
-        <div>
-          <div style="font-weight:800; font-size:12px; margin-bottom:6px">⚠ RULES WAJIB</div>
-          <div style="text-align:left; font-weight:400; font-size:11.5px; line-height:1.6">
-            • Jangan edit campaign sebelum<br>
-            &nbsp;&nbsp;7 hari & 50 konversi/adset/minggu<br>
-            • Jangan ganti objective<br>
-            • Jangan edit budget >20% sekali<br>
-            • Jangan gabungkan retargeting<br>
-            &nbsp;&nbsp;+ prospecting dalam 1 campaign<br>
-            • Evaluasi minimal per 7 hari
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="color:#546e7a; font-size:20px; padding-top:40px">→</div>
-
-    <!-- WAIT 7 DAYS -->
-    <div class="compound">
-      <div class="node rect c-wait" style="min-width:160px; white-space:normal; text-align:center; padding:14px">
-        <div>
-          <div style="font-size:13px; font-weight:800">⏳ TUNGGU</div>
-          <div style="font-size:20px; font-weight:800; margin: 4px 0">7 HARI</div>
-          <div style="font-size:11px; font-weight:400; color:#ffe0b2">Learning phase<br>Jangan disentuh</div>
-        </div>
-      </div>
-    </div>
-
+    <div class="auth-err" id="auth-err"></div>
+    <button class="auth-enter" onclick="enterApp()">Masuk →</button>
+    <div class="auth-hint" id="auth-hint">Mode viewer: akses langsung tanpa password</div>
   </div>
 </div>
 
-<!-- arrow down -->
-<div class="arrow-down"><div class="line" style="height:24px"></div><div class="head">▼</div></div>
-<div style="font-size:11px; color:#80cbc4; font-weight:600; margin-bottom:4px">Setelah 7 hari →</div>
+<!-- ── TOAST ── -->
+<div id="toast"></div>
 
-<!-- ═══════════════════════════════ EVALUASI MINGGUAN ═══════════════════ -->
-<div class="section-label" style="margin-top:8px">EVALUASI MINGGUAN — TITIK KEPUTUSAN UTAMA</div>
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal"><div class="modal-header"><span class="modal-title" id="modal-title"></span><button class="modal-close" onclick="closeModalDirect()">×</button></div><div id="modal-body"></div></div>
+</div>
 
-<!-- LEARNING PHASE CHECK -->
-<div class="frame" style="width:1380px">
-  <div class="frame-title">LAYER 1 — CEK LEARNING PHASE</div>
-  <div class="row" style="gap:32px; align-items:flex-start">
-
-    <div class="compound">
-      <div class="node rect c-check" style="min-width:200px; white-space:normal; padding:10px 14px; font-size:12px">
-        <div>
-          <div style="font-weight:800; color:#80deea">Cek Status Learning</div>
-          <div style="font-size:11px; font-weight:400; color:#b2ebf2; margin-top:4px; text-align:left">
-            Di Ads Manager:<br>
-            • Learning = masih belajar<br>
-            • Active = sudah stabil<br>
-            • Learning Limited = masalah
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="color:#546e7a; font-size:20px; padding-top:30px">→</div>
-
-    <!-- DECISION DIAMOND: 50 conversions? -->
-    <div class="compound" style="position:relative">
-      <div class="node diamond c-decision">
-        <div class="label" style="font-size:11px; line-height:1.4">50 konversi<br>/adset<br>/minggu?</div>
-      </div>
-    </div>
-
-    <!-- YES BRANCH -->
-    <div class="compound">
-      <div class="lbl lbl-y" style="font-size:11px; margin-bottom:6px">YA — Learning selesai</div>
-      <div class="node rect c-action" style="min-width:170px; white-space:normal; padding:10px 14px; font-size:12px">
-        <div>
-          <div style="font-weight:800">✓ Learning Phase Exit</div>
-          <div style="font-size:11px; font-weight:400; margin-top:4px; text-align:left">
-            Lanjut ke Layer 2<br>(Evaluasi ROAS)
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- NO BRANCH -->
-    <div class="compound">
-      <div class="lbl lbl-n" style="font-size:11px; margin-bottom:6px">TIDAK</div>
-      <div class="node rect c-decision" style="min-width:170px; white-space:normal; padding:10px 14px; font-size:12px; background:#5d4037; border-color:#a1887f; color:#efebe9">
-        <div>
-          <div style="font-weight:800">Learning Limited?</div>
-        </div>
-      </div>
-      <div class="v-line-s"></div>
-      <div class="row" style="gap:16px">
-        <div class="compound">
-          <div class="lbl lbl-y" style="font-size:10px; margin-bottom:4px">YA</div>
-          <div class="node rect c-rule" style="min-width:150px; white-space:normal; padding:8px 12px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Fix Learning Limited</div>
-              <div style="font-weight:400; margin-top:3px; text-align:left">
-                1. Naikkan budget<br>
-                2. Perluas audience<br>
-                3. Merge adset sejenis<br>
-                4. Ganti event ke ATC<br>
-                &nbsp;&nbsp;&nbsp;(jika purchase terlalu jarang)
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="compound">
-          <div class="lbl lbl-n" style="font-size:10px; margin-bottom:4px">TIDAK</div>
-          <div class="node rect c-wait" style="min-width:130px; white-space:normal; padding:8px 12px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Wait & See</div>
-              <div style="font-weight:400; margin-top:3px">7 hari lagi<br>Jangan disentuh</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+<!-- ── MODE BAR ── -->
+<div id="mode-bar" style="display:none">
+  <span id="mode-pill-el"></span>
+  <div class="mode-bar-right">
+    <span id="bar-admin-actions" style="display:none;gap:8px;align-items:center" class="btn-group">
+      <button class="btn btn-sm" onclick="exportData()">⬇ Export data</button>
+      <button class="btn btn-sm" onclick="R('import-file').click()">⬆ Import data</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </span>
+    <button class="btn btn-sm" onclick="signOut()">Ganti mode</button>
   </div>
 </div>
 
-<!-- arrow down -->
-<div class="arrow-down"><div class="line" style="height:20px"></div><div class="head">▼</div></div>
-<div style="font-size:11px; color:#80cbc4; font-weight:600; margin:2px 0">Learning phase sudah exit →</div>
-<div class="arrow-down"><div class="line" style="height:12px"></div><div class="head">▼</div></div>
+<!-- ── MAIN APP ── -->
+<div id="app" style="display:none">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">
+        <span>Performance</span>
+        <h1>Content Tracker</h1>
+      </div>
+      <nav>
+        <div class="nav-item active" onclick="goTo('dashboard')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          Dashboard
+        </div>
+        <div class="nav-item admin-only" onclick="goTo('log')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+          Log weekly
+        </div>
+        <div class="nav-item" onclick="goTo('upcoming')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+          Upcoming creative
+        </div>
+        <div class="nav-item" onclick="goTo('history')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8a6 6 0 1 0 12 0A6 6 0 0 0 2 8zm6-3v3l3 1.5"/></svg>
+          History per konten
+        </div>
+        <div class="nav-item admin-only" onclick="goTo('contents')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
+          Kelola konten
+        </div>
+      </nav>
+      <div class="sidebar-footer">v1.1 · <span id="sb-mode-label">viewer</span></div>
+    </aside>
 
-<!-- ═══════════════════ LAYER 2: EVALUASI ROAS ═══════════════════ -->
-<div class="frame" style="width:1380px; margin-top:4px">
-  <div class="frame-title">LAYER 2 — EVALUASI ROAS (Data 1 Minggu, Bukan Harian)</div>
+    <main class="main">
 
-  <div class="row" style="gap:0px; align-items:flex-start">
-
-    <!-- RETARGETING ROAS -->
-    <div class="compound" style="padding: 0 16px; border-right: 1px dashed #263238">
-      <div style="font-size:11px; font-weight:700; color:#42a5f5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">RETARGETING Campaign</div>
-
-      <div class="node rect c-check" style="min-width:170px; white-space:normal; padding:9px 12px; font-size:11.5px">
-        <div>
-          <div style="font-weight:800; color:#80deea">Hitung ROAS<br>7 Hari Terakhir</div>
-          <div style="font-size:10.5px; font-weight:400; margin-top:3px">Ambil dari Meta Ads Manager<br>Attribution: 7D click + 1D view</div>
+      <!-- DASHBOARD -->
+      <div id="sec-dashboard" class="section active">
+        <div class="page-header">
+          <div class="page-header-text"><h2>Dashboard</h2><p>Overview semua konten aktif</p></div>
+        </div>
+        <div class="metrics-grid" id="dash-metrics"></div>
+        <div class="card">
+          <div class="card-title">ROAS trend per konten</div>
+          <div id="dash-legend" style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px;font-size:12px;font-family:var(--mono);color:var(--text3)"></div>
+          <div class="chart-wrap" style="height:260px"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Lifespan & status</div>
+          <div id="lifespan-list"></div>
         </div>
       </div>
-      <div class="v-line-s"></div>
 
-      <!-- gap ROAS retargeting -->
-      <div class="node diamond c-decision" style="width:120px; height:120px">
-        <div class="label" style="font-size:10.5px">Gap ROAS<br>retargeting<br>&gt;30%?</div>
-      </div>
-
-      <!-- 3 paths -->
-      <div class="row" style="gap:10px; margin-top:10px; align-items:flex-start">
-        <!-- GAP > 30%: turunkan target -->
-        <div class="compound">
-          <div class="lbl lbl-y" style="font-size:10px; margin-bottom:4px">YA &gt;30%</div>
-          <div class="node rect c-rule" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Turunkan Target ROAS</div>
-              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
-                Max. turun 20–30%<br>
-                Beri ruang sistem<br>
-                Wait 7 hari
-              </div>
-            </div>
+      <!-- LOG (admin only) -->
+      <div id="sec-log" class="section">
+        <div class="page-header"><div class="page-header-text"><h2>Log weekly</h2><p>Input metrik tiap konten per minggu</p></div></div>
+        <div class="viewer-notice" id="log-viewer-notice">🔒 Mode viewer — tidak bisa input data. Minta admin untuk log data.</div>
+        <div class="card admin-action-block">
+          <div class="card-title">Entry baru</div>
+          <div class="form-grid">
+            <div class="field"><label>Konten</label><select id="l-content"><option value="">-- pilih --</option></select></div>
+            <div class="field"><label>Week label</label><input id="l-week" placeholder="W2 Mei 2025"></div>
+            <div class="field"><label>Spend (Rp)</label><input id="l-spend" type="number" placeholder="2500000"></div>
+            <div class="field"><label>ROAS</label><input id="l-roas" type="number" step="0.01" placeholder="3.20"></div>
+            <div class="field"><label>CTR (%)</label><input id="l-ctr" type="number" step="0.01" placeholder="2.10"></div>
+            <div class="field"><label>CPC (Rp)</label><input id="l-cpc" type="number" placeholder="1500"></div>
+            <div class="field"><label>CPM (Rp)</label><input id="l-cpm" type="number" placeholder="45000"></div>
+            <div class="field"><label>Hook Rate (%)</label><input id="l-hook" type="number" step="0.1" placeholder="35"></div>
+            <div class="field"><label>Purchases</label><input id="l-purch" type="number" placeholder="80"></div>
+            <div class="field"><label>Impressions</label><input id="l-impr" type="number" placeholder="180000"></div>
           </div>
+          <div class="btn-group"><button class="btn btn-primary" onclick="logEntry()">Simpan entry</button></div>
         </div>
-        <!-- GAP 10-30%: wait -->
-        <div class="compound">
-          <div class="lbl" style="font-size:10px; margin-bottom:4px; background:#1a237e; color:#90caf9; padding:1px 6px; border-radius:4px">10–30%</div>
-          <div class="node rect c-wait" style="min-width:110px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Wait & See</div>
-              <div style="font-weight:400; margin-top:2px; font-size:10.5px">7 hari lagi</div>
-            </div>
-          </div>
-        </div>
-        <!-- GAP < 10% (ACHIEVE) -->
-        <div class="compound">
-          <div class="lbl lbl-n" style="font-size:10px; margin-bottom:4px">&lt;10% ACHIEVE!</div>
-          <div class="node rect c-action" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">✓ ROAS Achieve</div>
-              <div style="font-weight:400; margin-top:2px; font-size:10.5px">
-                Lanjut ke<br>Scale Decision
-              </div>
-            </div>
-          </div>
+        <div class="card">
+          <div class="card-title">Entry terbaru</div>
+          <div class="table-wrap"><div id="recent-entries"></div></div>
         </div>
       </div>
-    </div>
 
-    <!-- PROSPECTING ROAS -->
-    <div class="compound" style="padding: 0 16px">
-      <div style="font-size:11px; font-weight:700; color:#ce93d8; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">PROSPECTING Campaign</div>
-
-      <div class="node rect c-check" style="min-width:170px; white-space:normal; padding:9px 12px; font-size:11.5px; background:#00363a; border-color:#0097a7">
-        <div>
-          <div style="font-weight:800; color:#80deea">Hitung ROAS<br>7 Hari Terakhir</div>
-          <div style="font-size:10.5px; font-weight:400; margin-top:3px">Prospecting baseline<br>biasanya lebih rendah dari retargeting</div>
+      <!-- UPCOMING -->
+      <div id="sec-upcoming" class="section">
+        <div class="page-header">
+          <div class="page-header-text"><h2>Upcoming creative</h2><p>Pipeline konten yang belum live</p></div>
+          <button class="btn btn-primary admin-action" onclick="openUpcomingForm()">+ Tambah upcoming</button>
         </div>
-      </div>
-      <div class="v-line-s"></div>
-
-      <!-- Prospecting ROAS check -->
-      <div class="node diamond c-decision" style="width:120px; height:120px; background:#6a1b9a; border-color:#ba68c8">
-        <div class="label" style="font-size:10.5px">ROAS<br>Prospecting<br>positif?</div>
+        <div class="viewer-notice" id="upcoming-viewer-notice">👁 Mode viewer — kamu bisa lihat pipeline creative yang sedang disiapkan.</div>
+        <div id="upcoming-grid" class="upcoming-grid"></div>
       </div>
 
-      <div class="row" style="gap:10px; margin-top:10px; align-items:flex-start">
-        <!-- YES -->
-        <div class="compound">
-          <div class="lbl lbl-y" style="font-size:10px; margin-bottom:4px">YA &gt; 1x</div>
-          <div class="node rect c-action" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px; background:#1a3a1f">
-            <div>
-              <div style="font-weight:800">Prospecting Oke</div>
-              <div style="font-weight:400; margin-top:2px; font-size:10.5px">
-                Funnel berjalan<br>Lanjut evaluasi<br>mingguan
-              </div>
-            </div>
+      <!-- HISTORY -->
+      <div id="sec-history" class="section">
+        <div class="page-header"><div class="page-header-text"><h2>History per konten</h2><p>Trend lengkap — kapan naik, peak, mulai turun</p></div></div>
+        <div class="card">
+          <div class="form-grid" style="grid-template-columns:1fr">
+            <div class="field"><label>Pilih konten</label><select id="hist-select" onchange="renderHistory()"><option value="">-- pilih konten --</option></select></div>
           </div>
-        </div>
-        <!-- NO — demand issue -->
-        <div class="compound">
-          <div class="lbl lbl-n" style="font-size:10px; margin-bottom:4px">TIDAK &lt; 1x</div>
-          <div class="node rect c-warn" style="min-width:140px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">⚠ Demand Issue?</div>
-              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
-                Cek:<br>
-                • Listing quality<br>
-                • Harga kompetitif?<br>
-                • Review cukup?<br>
-                • CTR vs CVR gap?
-              </div>
-            </div>
-          </div>
-          <div class="v-line-s"></div>
-          <div class="row" style="gap:8px">
-            <div class="compound">
-              <div class="lbl lbl-n" style="font-size:9px; margin-bottom:3px">Listing buruk</div>
-              <div class="node rect c-stop" style="min-width:100px; white-space:normal; padding:6px 8px; font-size:10.5px">
-                <div>Fix listing dulu<br>Pause prospecting</div>
-              </div>
-            </div>
-            <div class="compound">
-              <div class="lbl lbl-y" style="font-size:9px; margin-bottom:3px">Listing oke</div>
-              <div class="node rect c-wait" style="min-width:100px; white-space:normal; padding:6px 8px; font-size:10.5px">
-                <div>Uji creative baru<br>Wait 7 hari</div>
-              </div>
-            </div>
-          </div>
+          <div id="hist-detail"></div>
         </div>
       </div>
-    </div>
 
+      <!-- CONTENTS (admin only) -->
+      <div id="sec-contents" class="section">
+        <div class="page-header"><div class="page-header-text"><h2>Kelola konten</h2><p>Tambah, edit, hapus konten aktif</p></div></div>
+        <div class="card admin-action-block">
+          <div class="card-title">Tambah konten aktif baru</div>
+          <div class="form-grid">
+            <div class="field"><label>Nama konten / ID</label><input id="c-name" placeholder="Dark Away Split Screen MUA"></div>
+            <div class="field"><label>Produk</label><input id="c-product" placeholder="Dark Away Creamy Blend"></div>
+            <div class="field"><label>Format</label><select id="c-format"><option>Video UGC</option><option>Video Brand</option><option>Static Image</option><option>Carousel</option><option>Story Ad</option></select></div>
+            <div class="field"><label>Hook type</label><select id="c-hook"><option>Pain / Problem</option><option>Before-After</option><option>Authority / Social Proof</option><option>Curiosity / Pattern Interrupt</option><option>Desire / Aspiration</option></select></div>
+            <div class="field"><label>Target ROAS</label><input id="c-troas" type="number" step="0.1" placeholder="3.0"></div>
+            <div class="field"><label>Target CTR (%)</label><input id="c-tctr" type="number" step="0.1" placeholder="2.0"></div>
+            <div class="field"><label>Tanggal launch</label><input id="c-date" type="date"></div>
+            <div class="field"><label>Notes</label><input id="c-notes" placeholder="Opsional"></div>
+          </div>
+          <button class="btn btn-primary" onclick="addContent()">Tambah konten</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Semua konten</div>
+          <div class="table-wrap"><div id="content-table"></div></div>
+        </div>
+      </div>
+
+    </main>
   </div>
 </div>
 
-<!-- arrow down -->
-<div class="arrow-down"><div class="line" style="height:20px"></div><div class="head">▼</div></div>
-<div style="font-size:11px; color:#80cbc4; font-weight:600; margin:2px 0">ROAS Achieve & Campaign Stabil →</div>
-<div class="arrow-down"><div class="line" style="height:12px"></div><div class="head">▼</div></div>
+<script>
+// ─────────────────────────────────────────────────────────
+// CONFIG — ganti password di sini sebelum deploy
+// ─────────────────────────────────────────────────────────
+const ADMIN_PASSWORD = 'haquhara2025';
 
-<!-- ═══════════════════ LAYER 3: SCALE DECISION ═══════════════════ -->
-<div class="section-label" style="margin-top:4px">SCALE DECISION — KAPAN DAN BAGAIMANA SCALE</div>
+// ─────────────────────────────────────────────────────────
+const COLORS=['#c8f77a','#60a5fa','#f87171','#fbbf24','#a78bfa','#4ade80','#fb923c','#f472b6','#34d399','#e879f9'];
+let MODE = null; // 'admin' | 'viewer'
+let selectedMode = 'viewer';
 
-<div class="frame frame-scale" style="width:1380px">
-  <div class="frame-title" style="color:#ce93d8">LAYER 3 — SCALE FRAMEWORK (3 Kondisi)</div>
+let S = {
+  contents:[
+    {id:'c1',name:'Dark Away - Split Screen MUA',product:'Dark Away Creamy Blend',format:'Static Image',hook:'Authority / Social Proof',targetRoas:3.0,targetCtr:2.0,date:'2025-04-01',notes:''},
+    {id:'c2',name:'Fortuna Facelift - Before After',product:'Fortuna Facelift',format:'Video Brand',hook:'Before-After',targetRoas:3.0,targetCtr:2.0,date:'2025-04-01',notes:'Collab Sherly Kartika'},
+    {id:'c3',name:'MGS - Comb Hook UGC',product:'Makeup Gripping Serum',format:'Video UGC',hook:'Curiosity / Pattern Interrupt',targetRoas:3.0,targetCtr:2.0,date:'2025-04-08',notes:''},
+  ],
+  entries:[
+    {id:'e1',cid:'c1',week:'W1 Apr',spend:2000000,roas:2.8,ctr:1.9,cpc:1600,cpm:42000,hook:28,purch:62,impr:150000},
+    {id:'e2',cid:'c1',week:'W2 Apr',spend:2500000,roas:3.4,ctr:2.3,cpc:1300,cpm:40000,hook:33,purch:89,impr:180000},
+    {id:'e3',cid:'c1',week:'W3 Apr',spend:3000000,roas:4.1,ctr:2.8,cpc:1100,cpm:38000,hook:38,purch:115,impr:210000},
+    {id:'e4',cid:'c1',week:'W4 Apr',spend:3000000,roas:3.5,ctr:2.4,cpc:1250,cpm:40000,hook:34,purch:98,impr:200000},
+    {id:'e5',cid:'c1',week:'W1 Mei',spend:2800000,roas:2.9,ctr:2.0,cpc:1450,cpm:43000,hook:30,purch:79,impr:185000},
+    {id:'e6',cid:'c2',week:'W1 Apr',spend:2500000,roas:3.2,ctr:2.2,cpc:1400,cpm:44000,hook:36,purch:78,impr:175000},
+    {id:'e7',cid:'c2',week:'W2 Apr',spend:3000000,roas:4.5,ctr:3.1,cpc:1050,cpm:38000,hook:42,purch:124,impr:225000},
+    {id:'e8',cid:'c2',week:'W3 Apr',spend:3500000,roas:5.0,ctr:3.4,cpc:990,cpm:35000,hook:45,purch:148,impr:260000},
+    {id:'e9',cid:'c2',week:'W4 Apr',spend:3500000,roas:4.6,ctr:3.0,cpc:1080,cpm:37000,hook:42,purch:138,impr:250000},
+    {id:'e10',cid:'c2',week:'W1 Mei',spend:3500000,roas:4.2,ctr:2.8,cpc:1150,cpm:39000,hook:39,purch:128,impr:240000},
+    {id:'e11',cid:'c3',week:'W2 Apr',spend:1500000,roas:2.5,ctr:1.7,cpc:1800,cpm:48000,hook:30,purch:42,impr:120000},
+    {id:'e12',cid:'c3',week:'W3 Apr',spend:1800000,roas:3.3,ctr:2.2,cpc:1350,cpm:42000,hook:37,purch:58,impr:150000},
+    {id:'e13',cid:'c3',week:'W4 Apr',spend:2000000,roas:3.8,ctr:2.5,cpc:1200,cpm:40000,hook:40,purch:71,impr:165000},
+    {id:'e14',cid:'c3',week:'W1 Mei',spend:2000000,roas:3.6,ctr:2.4,cpc:1230,cpm:41000,hook:38,purch:67,impr:162000},
+  ],
+  upcoming:[
+    {id:'u1',name:'Dark Away - Skincare Routine POV',product:'Dark Away Creamy Blend',format:'Video UGC',hook:'Before-After',status:'In production',targetDate:'W2 Mei 2025',hypothesis:'Test hook B4-After untuk audience skincare, bukan MUA',notes:''},
+    {id:'u2',name:'MGS - "Kenapa makeup gue turun?" Hook',product:'Makeup Gripping Serum',format:'Video UGC',hook:'Pain / Problem',status:'Brief sent',targetDate:'W3 Mei 2025',hypothesis:'Angle problem-aware, competitor positioning',notes:'KOL Jenna sudah dikonfirmasi'},
+  ]
+};
 
-  <div class="row" style="gap:0; align-items:flex-start">
+// ── Storage ──────────────────────────────────────────────
+function save(){try{localStorage.setItem('clt3',JSON.stringify(S))}catch(e){}}
+function load(){try{const d=localStorage.getItem('clt3');if(d)S=JSON.parse(d)}catch(e){}}
 
-    <!-- SCALE UP (Vertical) -->
-    <div class="compound" style="padding: 0 20px; border-right: 1px dashed #4a148c; min-width:360px">
-      <div style="font-size:11px; font-weight:700; color:#ce93d8; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">📈 SCALE UP — Volume Lebih Besar</div>
+// ── Utils ────────────────────────────────────────────────
+const R=id=>document.getElementById(id);
+const fmt=n=>n?'Rp'+Number(n).toLocaleString('id-ID'):'—';
+const fmtM=n=>n?'Rp'+(n/1000000).toFixed(1)+'jt':'—';
+const isAdmin=()=>MODE==='admin';
 
-      <div class="node rect c-check" style="min-width:280px; white-space:normal; padding:9px 14px; font-size:12px">
-        <div>
-          <div style="font-weight:800; color:#80deea">Syarat Scale Up (Semua harus terpenuhi)</div>
-          <div style="font-size:11px; font-weight:400; margin-top:4px; text-align:left; color:#b2ebf2">
-            ✓ ROAS Achieve (gap &lt;10%) selama 1 minggu<br>
-            ✓ Learning phase sudah exit<br>
-            ✓ Spending stabil, tidak ada spike aneh<br>
-            ✓ Tidak ada perubahan lain 7 hari terakhir
-          </div>
+function toast(msg,type='ok'){
+  const el=R('toast');
+  el.textContent=msg;el.className='show '+(type==='ok'?'ok':'err');
+  setTimeout(()=>el.className='',2400);
+}
+
+function getEntries(cid){return S.entries.filter(e=>e.cid===cid)}
+
+function getDecision(entry,content){
+  if(!entry)return'monitor';
+  const tr=content.targetRoas||3,tc=content.targetCtr||2;
+  if(entry.roas>=tr&&entry.ctr>=tc)return'up';
+  if(entry.roas>=tr*0.8||entry.ctr>=tc*0.9)return'out';
+  if(entry.roas>=tr*0.5)return'monitor';
+  return'kill';
+}
+
+function decisionBadge(d){
+  return{up:'<span class="badge badge-up">Scale up</span>',out:'<span class="badge badge-out">Scale out</span>',monitor:'<span class="badge badge-monitor">Monitor</span>',kill:'<span class="badge badge-kill">Kill</span>'}[d]||'<span class="badge badge-neutral">—</span>';
+}
+
+function getPhase(entries,targetRoas){
+  if(!entries.length)return'inactive';
+  if(entries.length<2)return'testing';
+  const roas=entries.map(e=>e.roas),peak=Math.max(...roas),last=roas[roas.length-1];
+  if(last>=targetRoas&&last>=peak*0.9)return'peak';
+  if(last>=targetRoas&&last<peak*0.9)return'declining';
+  if(last<targetRoas*0.65)return'dead';
+  return'growing';
+}
+
+const phaseLabel={peak:'Peak',growing:'Growing',declining:'Declining',dead:'Dead',inactive:'Inactive',testing:'Testing'};
+
+function trendArrow(entries,k){
+  if(entries.length<2)return'<span class="trend-fl">—</span>';
+  const l=entries[entries.length-1][k],p=entries[entries.length-2][k];
+  if(!p)return'<span class="trend-fl">—</span>';
+  const pct=((l-p)/p*100).toFixed(1);
+  if(pct>2)return`<span class="trend-up">▲ ${pct}%</span>`;
+  if(pct<-2)return`<span class="trend-dn">▼ ${Math.abs(pct)}%</span>`;
+  return`<span class="trend-fl">— ${pct}%</span>`;
+}
+
+// ── Auth ─────────────────────────────────────────────────
+function selectMode(m){
+  selectedMode=m;
+  R('mode-viewer-btn').classList.toggle('selected',m==='viewer');
+  R('mode-admin-btn').classList.toggle('selected',m==='admin');
+  R('pw-section').style.display=m==='admin'?'block':'none';
+  R('auth-hint').textContent=m==='viewer'?'Mode viewer: akses langsung tanpa password':'Masukkan password admin';
+  R('auth-err').textContent='';
+  if(m==='admin')R('pw-input').focus();
+}
+
+function enterApp(){
+  if(selectedMode==='admin'){
+    const pw=R('pw-input').value;
+    if(pw!==ADMIN_PASSWORD){
+      R('auth-err').textContent='Password salah.';
+      R('pw-input').value='';R('pw-input').focus();return;
+    }
+  }
+  MODE=selectedMode;
+  R('auth-screen').style.display='none';
+  R('mode-bar').style.display='flex';
+  R('app').style.display='block';
+  applyMode();
+  load();populateSelects();renderDash();renderRecentEntries();renderContentTable();
+}
+
+function signOut(){
+  MODE=null;selectedMode='viewer';
+  R('pw-input').value='';R('auth-err').textContent='';
+  selectMode('viewer');
+  R('auth-screen').style.display='flex';
+  R('mode-bar').style.display='none';
+  R('app').style.display='none';
+}
+
+function applyMode(){
+  const admin=isAdmin();
+  // Mode pill
+  R('mode-pill-el').innerHTML=admin
+    ?'<span class="mode-pill admin">⚙️ Admin</span>'
+    :'<span class="mode-pill viewer">👁 Viewer</span>';
+  // Admin-only nav items
+  document.querySelectorAll('.admin-only').forEach(el=>el.classList.toggle('visible',admin));
+  // Admin action buttons
+  document.querySelectorAll('.admin-action').forEach(el=>el.classList.toggle('visible',admin));
+  document.querySelectorAll('.admin-action-block').forEach(el=>el.classList.toggle('visible',admin));
+  // Bar admin actions
+  R('bar-admin-actions').style.display=admin?'flex':'none';
+  // Sidebar label
+  R('sb-mode-label').textContent=admin?'admin':'viewer';
+  // Viewer notices
+  R('log-viewer-notice').classList.toggle('show',!admin);
+  R('upcoming-viewer-notice').classList.toggle('show',!admin);
+}
+
+// ── Navigation ───────────────────────────────────────────
+function goTo(name){
+  // Viewer can't access log or contents sections
+  if(!isAdmin()&&(name==='log'||name==='contents'))return;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  const navEl=document.querySelector(`[onclick="goTo('${name}')"]`);
+  if(navEl)navEl.classList.add('active');
+  const secEl=R('sec-'+name);
+  if(secEl)secEl.classList.add('active');
+  if(name==='history')renderHistory();
+  if(name==='upcoming')renderUpcoming();
+}
+
+// ── Modal ────────────────────────────────────────────────
+function openModal(title,html){R('modal-title').textContent=title;R('modal-body').innerHTML=html;R('modal-overlay').classList.add('open')}
+function closeModal(e){if(e.target===R('modal-overlay'))closeModalDirect()}
+function closeModalDirect(){R('modal-overlay').classList.remove('open')}
+
+// ── Export / Import ──────────────────────────────────────
+function exportData(){
+  const json=JSON.stringify(S,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='content-tracker-data.json';a.click();
+  URL.revokeObjectURL(url);
+  toast('Data exported!');
+}
+
+function importData(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.contents||!data.entries)throw new Error('Format salah');
+      S=data;save();
+      populateSelects();renderDash();renderRecentEntries();renderContentTable();
+      toast('Data imported!');
+    }catch(err){toast('File tidak valid','err')}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// ── Dashboard ────────────────────────────────────────────
+function renderDashMetrics(){
+  const active=S.contents.filter(c=>{const e=getEntries(c.id);return e.length&&e[e.length-1].roas>=c.targetRoas*0.5}).length;
+  const scaleUp=S.contents.filter(c=>{const e=getEntries(c.id);return e.length&&getDecision(e[e.length-1],c)==='up'}).length;
+  const allE=S.entries;
+  const avgRoas=allE.length?(allE.reduce((s,e)=>s+e.roas,0)/allE.length).toFixed(2):'—';
+  const totalSpend=allE.reduce((s,e)=>s+e.spend,0);
+  R('dash-metrics').innerHTML=`
+    <div class="metric"><div class="lbl">Konten aktif</div><div class="val">${active}</div><div class="sub">dari ${S.contents.length} total</div></div>
+    <div class="metric"><div class="lbl">Upcoming</div><div class="val">${S.upcoming.length}</div><div class="sub">di pipeline</div></div>
+    <div class="metric"><div class="lbl">Avg ROAS</div><div class="val">${avgRoas}x</div><div class="sub">all time</div></div>
+    <div class="metric"><div class="lbl">Total spend</div><div class="val">${fmtM(totalSpend)}</div><div class="sub">logged</div></div>
+    <div class="metric"><div class="lbl">Siap scale up</div><div class="val">${scaleUp}</div><div class="sub">konten</div></div>
+  `;
+}
+
+let trendInst=null;
+function renderTrendChart(){
+  const ctx=R('trendChart');if(!ctx)return;
+  const allWeeks=[...new Set(S.entries.map(e=>e.week))].sort();
+  const datasets=S.contents.map((c,i)=>{
+    const entries=getEntries(c.id);
+    const data=allWeeks.map(w=>{const e=entries.find(x=>x.week===w);return e?e.roas:null});
+    return{label:c.name,data,borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+'18',tension:0.35,spanGaps:false,pointRadius:4,pointHoverRadius:6,borderWidth:2,fill:false};
+  });
+  if(trendInst)trendInst.destroy();
+  trendInst=new Chart(ctx,{type:'line',data:{labels:allWeeks,datasets},options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toFixed(2)}x`}}},
+    scales:{
+      y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555',callback:v=>`${v}x`,font:{size:11,family:'DM Mono'}}},
+      x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555',font:{size:11,family:'DM Mono'}}}
+    }
+  }});
+  R('dash-legend').innerHTML=S.contents.map((c,i)=>`<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:${COLORS[i%COLORS.length]};border-radius:2px;display:inline-block"></span>${c.name}</span>`).join('');
+}
+
+function renderLifespan(){
+  const el=R('lifespan-list');
+  if(!S.contents.length){el.innerHTML='<div class="empty"><span>📭</span>Belum ada konten.</div>';return}
+  el.innerHTML=S.contents.map((c,i)=>{
+    const entries=getEntries(c.id).sort((a,b)=>a.week.localeCompare(b.week));
+    const phase=getPhase(entries,c.targetRoas||3);
+    const last=entries[entries.length-1];
+    const decision=last?getDecision(last,c):'monitor';
+    const peak=entries.length?entries.reduce((m,e)=>e.roas>m.roas?e:m,entries[0]):{roas:0,week:'—'};
+    const agePct=Math.min(entries.length/16*100,100);
+    return`<div class="lifespan-row">
+      <div class="lsr-dot" style="background:${COLORS[i%COLORS.length]}"></div>
+      <div class="lsr-info">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="lsr-name">${c.name}</span>
+          <span class="phase-tag phase-${phase}">${phaseLabel[phase]||phase}</span>
         </div>
+        <div class="lsr-meta">${c.product} · ${entries.length}w aktif · peak ${peak.week} (${peak.roas.toFixed(1)}x)</div>
+        <div class="age-bar"><div class="age-fill" style="width:${agePct}%;background:${COLORS[i%COLORS.length]}"></div></div>
       </div>
-      <div class="v-line-s"></div>
-
-      <div class="row" style="gap:14px; align-items:flex-start">
-        <div class="compound">
-          <div style="font-size:10.5px; font-weight:700; color:#ce93d8; margin-bottom:4px">Opsi A — Budget Scale</div>
-          <div class="node rect c-scale" style="min-width:150px; white-space:normal; padding:9px 12px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Naikkan Budget</div>
-              <div style="font-weight:400; margin-top:4px; text-align:left">
-                +15–20% setiap kali<br>
-                Jangan >20% sekaligus<br>
-                Tunggu 3 hari setelah<br>
-                setiap kenaikan<br><br>
-                Atau: Duplicate campaign<br>
-                (lebih aman, no reset)
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="compound">
-          <div style="font-size:10.5px; font-weight:700; color:#ce93d8; margin-bottom:4px">Opsi B — Expand Audience</div>
-          <div class="node rect c-scale" style="min-width:150px; white-space:normal; padding:9px 12px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Scale Out Audience</div>
-              <div style="font-weight:400; margin-top:4px; text-align:left">
-                • Perluas LAL: 1% → 2–3%<br>
-                • Tambah ATC window lebih luas<br>
-                &nbsp;&nbsp;(30 → 60 hari)<br>
-                • Add upsell/cross-sell adset<br>
-                • Satu perubahan per minggu
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="lsr-right">
+        ${decisionBadge(decision)}
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--mono)">${last?last.roas.toFixed(1)+'x':'—'}</div>
+        ${trendArrow(entries,'roas')}
       </div>
+    </div>`;
+  }).join('');
+}
 
-      <div class="v-line-s"></div>
-      <div class="node rect c-wait" style="min-width:280px; white-space:normal; padding:8px 14px; font-size:11px">
-        <div>
-          <div style="font-weight:800">Setelah Scale: Wait & See 7 Hari</div>
-          <div style="font-weight:400; margin-top:2px; font-size:10.5px">Jangan ubah apapun lagi sebelum 7 hari berikutnya</div>
-        </div>
-      </div>
+function renderDash(){renderDashMetrics();renderTrendChart();renderLifespan()}
+
+// ── Log ──────────────────────────────────────────────────
+function logEntry(){
+  if(!isAdmin()){toast('Hanya admin yang bisa log data','err');return}
+  const cid=R('l-content').value,week=R('l-week').value.trim();
+  const spend=parseFloat(R('l-spend').value),roas=parseFloat(R('l-roas').value),ctr=parseFloat(R('l-ctr').value);
+  if(!cid||!week||!spend||!roas||!ctr){toast('Isi konten, week, spend, ROAS & CTR','err');return}
+  if(S.entries.find(e=>e.cid===cid&&e.week===week)){toast('Entry ini sudah ada','err');return}
+  S.entries.push({id:'e'+Date.now(),cid,week,spend,roas,ctr,
+    cpc:parseFloat(R('l-cpc').value)||0,cpm:parseFloat(R('l-cpm').value)||0,
+    hook:parseFloat(R('l-hook').value)||0,purch:parseFloat(R('l-purch').value)||0,
+    impr:parseFloat(R('l-impr').value)||0});
+  save();
+  ['l-week','l-spend','l-roas','l-ctr','l-cpc','l-cpm','l-hook','l-purch','l-impr'].forEach(id=>R(id).value='');
+  renderRecentEntries();renderDash();toast('Entry tersimpan!');
+}
+
+function renderRecentEntries(){
+  const el=R('recent-entries');
+  const sorted=[...S.entries].reverse().slice(0,10);
+  if(!sorted.length){el.innerHTML='<div class="empty">Belum ada entry.</div>';return}
+  const showDel=isAdmin();
+  el.innerHTML=`<table><thead><tr><th>Konten</th><th>Week</th><th>Spend</th><th>ROAS</th><th>CTR</th><th>Hook</th><th>Purchases</th><th>Decision</th>${showDel?'<th></th>':''}</tr></thead><tbody>${
+    sorted.map(e=>{
+      const c=S.contents.find(x=>x.id===e.cid);
+      return`<tr>
+        <td style="font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c?c.name:e.cid}</td>
+        <td class="mono">${e.week}</td><td class="mono">${fmtM(e.spend)}</td>
+        <td class="mono">${e.roas.toFixed(2)}x</td><td class="mono">${e.ctr.toFixed(2)}%</td>
+        <td class="mono">${e.hook||'—'}%</td><td class="mono">${e.purch||'—'}</td>
+        <td>${c?decisionBadge(getDecision(e,c)):''}</td>
+        ${showDel?`<td><button class="btn btn-danger btn-sm" onclick="deleteEntry('${e.id}')">Del</button></td>`:''}
+      </tr>`;
+    }).join('')
+  }</tbody></table>`;
+}
+
+function deleteEntry(id){
+  if(!isAdmin())return;
+  S.entries=S.entries.filter(e=>e.id!==id);
+  save();renderRecentEntries();renderDash();toast('Entry dihapus');
+}
+
+// ── Upcoming ─────────────────────────────────────────────
+function renderUpcoming(){
+  const el=R('upcoming-grid');
+  if(!S.upcoming.length){el.innerHTML='<div class="empty" style="grid-column:1/-1"><span>💡</span>Belum ada upcoming creative.</div>';return}
+  const statusColor={'In production':'var(--accent)','Brief sent':'var(--monitor)','Editing':'var(--out)','Ready to launch':'var(--up)','Idea':'var(--text3)'};
+  const admin=isAdmin();
+  el.innerHTML=S.upcoming.map(u=>`<div class="upcoming-card">
+    ${admin?`<div class="uc-actions">
+      <button class="btn btn-sm" onclick="launchUpcoming('${u.id}')">▶ Launch</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteUpcoming('${u.id}')">✕</button>
+    </div>`:''}
+    <div class="uc-hook">${u.hook}</div>
+    <div class="uc-name" style="padding-right:${admin?'90px':'0'}">${u.name}</div>
+    <div class="uc-product">${u.product}</div>
+    <div class="uc-tags">
+      <span class="uc-tag">${u.format}</span>
+      <span class="uc-tag" style="color:${statusColor[u.status]||'var(--text3)'}">${u.status}</span>
+      <span class="uc-tag">${u.targetDate}</span>
     </div>
+    ${u.hypothesis?`<div style="margin-top:10px;font-size:11px;color:var(--text3);font-style:italic;line-height:1.5">${u.hypothesis}</div>`:''}
+    ${u.notes?`<div style="margin-top:6px;font-size:11px;color:var(--text3)">${u.notes}</div>`:''}
+  </div>`).join('');
+}
 
-    <!-- STABLE / MAINTAIN -->
-    <div class="compound" style="padding: 0 20px; border-right: 1px dashed #4a148c; min-width:320px">
-      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">⚖️ MAINTAIN — Jaga Performa</div>
-
-      <div class="node rect c-action" style="min-width:260px; white-space:normal; padding:9px 14px; font-size:12px">
-        <div>
-          <div style="font-weight:800">Kondisi Ideal — Maintain Mode</div>
-          <div style="font-size:11px; font-weight:400; margin-top:4px; text-align:left">
-            ROAS achieve + volume cukup + spending stabil
-          </div>
-        </div>
-      </div>
-      <div class="v-line-s"></div>
-
-      <div class="node rect c-phase" style="min-width:260px; white-space:normal; padding:9px 14px; font-size:11px">
-        <div>
-          <div style="font-weight:800">Yang perlu dilakukan rutin:</div>
-          <div style="font-weight:400; margin-top:4px; text-align:left; line-height:1.6">
-            • Refresh creative setiap 10–14 hari<br>
-            &nbsp;&nbsp;(untuk hindari ad fatigue)<br>
-            • Monitor CTR — kalau drop, creative baru<br>
-            • Monitor audience saturation<br>
-            • Evaluasi mingguan tetap jalan<br>
-            • Tambah SKU ke catalog kalau ada produk baru
-          </div>
-        </div>
-      </div>
-      <div class="v-line-s"></div>
-      <div class="node rect c-wait" style="min-width:260px; white-space:normal; padding:8px 14px; font-size:11px">
-        <div>
-          <div style="font-weight:800">Tetap evaluasi tiap 7 hari</div>
-          <div style="font-weight:400; margin-top:2px; font-size:10.5px">Kalau stabil terus → pertimbangkan scale up</div>
-        </div>
-      </div>
+function openUpcomingForm(){
+  if(!isAdmin())return;
+  openModal('Tambah upcoming creative',`
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="field" style="grid-column:1/-1"><label>Nama creative</label><input id="u-name" placeholder="MGS - Kenapa makeup gue turun?"></div>
+      <div class="field"><label>Produk</label><input id="u-product" placeholder="Makeup Gripping Serum"></div>
+      <div class="field"><label>Format</label><select id="u-format"><option>Video UGC</option><option>Video Brand</option><option>Static Image</option><option>Carousel</option><option>Story Ad</option></select></div>
+      <div class="field"><label>Hook type</label><select id="u-hook"><option>Pain / Problem</option><option>Before-After</option><option>Authority / Social Proof</option><option>Curiosity / Pattern Interrupt</option><option>Desire / Aspiration</option></select></div>
+      <div class="field"><label>Status</label><select id="u-status"><option>Idea</option><option>Brief sent</option><option>In production</option><option>Editing</option><option>Ready to launch</option></select></div>
+      <div class="field"><label>Target week launch</label><input id="u-date" placeholder="W3 Mei 2025"></div>
+      <div class="field" style="grid-column:1/-1"><label>Hypothesis</label><input id="u-hypo" placeholder="Kenapa ini bisa work"></div>
+      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="u-notes" placeholder="KOL, referensi, dll..."></textarea></div>
     </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="saveUpcoming()">Simpan</button><button class="btn" onclick="closeModalDirect()">Batal</button></div>
+  `);
+}
 
-    <!-- SCALE DOWN / TROUBLE -->
-    <div class="compound" style="padding: 0 20px; min-width:380px">
-      <div style="font-size:11px; font-weight:700; color:#ef9a9a; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">📉 SCALE DOWN / TROUBLE SHOOT</div>
+function saveUpcoming(){
+  const name=R('u-name').value.trim();
+  if(!name){toast('Isi nama creative dulu','err');return}
+  S.upcoming.push({id:'u'+Date.now(),name,product:R('u-product').value.trim(),format:R('u-format').value,hook:R('u-hook').value,status:R('u-status').value,targetDate:R('u-date').value.trim(),hypothesis:R('u-hypo').value.trim(),notes:R('u-notes').value.trim()});
+  save();closeModalDirect();renderUpcoming();toast('Upcoming ditambah!');
+}
 
-      <div class="node rect c-decision" style="min-width:320px; white-space:normal; padding:9px 14px; font-size:12px">
-        <div>
-          <div style="font-weight:800">Identifikasi Masalah</div>
-        </div>
-      </div>
-      <div class="v-line-s"></div>
+function deleteUpcoming(id){
+  if(!isAdmin())return;
+  S.upcoming=S.upcoming.filter(u=>u.id!==id);
+  save();renderUpcoming();toast('Upcoming dihapus');
+}
 
-      <div class="row" style="gap:10px; align-items:flex-start">
+function launchUpcoming(id){
+  if(!isAdmin())return;
+  const u=S.upcoming.find(x=>x.id===id);if(!u)return;
+  S.contents.push({id:'c'+Date.now(),name:u.name,product:u.product,format:u.format,hook:u.hook,targetRoas:3.0,targetCtr:2.0,date:new Date().toISOString().slice(0,10),notes:u.hypothesis});
+  S.upcoming=S.upcoming.filter(x=>x.id!==id);
+  save();populateSelects();renderUpcoming();renderDash();toast('Dipindah ke konten aktif!');
+}
 
-        <div class="compound">
-          <div style="font-size:10px; font-weight:700; color:#ef9a9a; margin-bottom:4px; text-align:center">ROAS DROP<br>setelah scale</div>
-          <div class="node rect c-warn" style="min-width:130px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Scale Terlalu Agresif</div>
-              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
-                • Turunkan budget ke level stabil<br>
-                • Jangan turun >20% sekaligus<br>
-                • Wait 7 hari
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="compound">
-          <div style="font-size:10px; font-weight:700; color:#ef9a9a; margin-bottom:4px; text-align:center">ROAS DROP<br>tiba-tiba tanpa scale</div>
-          <div class="node rect c-warn" style="min-width:140px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Cek Penyebab</div>
-              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
-                • Ad fatigue? CTR drop?<br>
-                → Ganti creative<br>
-                • Audience saturasi?<br>
-                → Expand audience<br>
-                • Kompetitor lebih agresif?<br>
-                → Review harga/voucher<br>
-                • Listing berubah?<br>
-                → Fix listing dulu
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="compound">
-          <div style="font-size:10px; font-weight:700; color:#ef9a9a; margin-bottom:4px; text-align:center">TIDAK ADA<br>konversi &gt;14 hari</div>
-          <div class="node rect c-stop" style="min-width:120px; white-space:normal; padding:7px 10px; font-size:11px">
-            <div>
-              <div style="font-weight:800">Evaluasi Produk</div>
-              <div style="font-weight:400; margin-top:2px; text-align:left; font-size:10.5px">
-                Jika semua sudah OK:<br>
-                listing, harga, creative<br>
-                → Pause campaign<br>
-                Masalah ada di produk,<br>bukan iklan
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+// ── History ──────────────────────────────────────────────
+let histInst=null;
+function renderHistory(){
+  const cid=R('hist-select').value,el=R('hist-detail');
+  if(!cid){el.innerHTML='<div class="empty">Pilih konten untuk lihat history.</div>';return}
+  const c=S.contents.find(x=>x.id===cid);
+  const entries=getEntries(cid).sort((a,b)=>a.week.localeCompare(b.week));
+  if(!entries.length){el.innerHTML='<div class="empty">Belum ada data untuk konten ini.</div>';return}
+  const phase=getPhase(entries,c.targetRoas||3);
+  const last=entries[entries.length-1];
+  const peak=entries.reduce((m,e)=>e.roas>m.roas?e:m,entries[0]);
+  const totalSpend=entries.reduce((s,e)=>s+e.spend,0);
+  const phaseMsg={peak:'Konten di peak — pertahankan spend, jangan ubah creative.',growing:'Growing — scale up budget bertahap +20-30%/week.',declining:'Declining — ROAS mulai drop dari peak. Monitor ketat. Siap-siap refresh atau kill.',dead:'Dead — stop spend. Start fresh dengan angle baru.',testing:'Testing — data belum cukup. Butuh minimal 3-4 week sebelum keputusan.',inactive:'Inactive — belum ada entry.'};
+  el.innerHTML=`
+    <div class="hist-metrics">
+      <div class="metric"><div class="lbl">Umur</div><div class="val">${entries.length}w</div></div>
+      <div class="metric"><div class="lbl">Peak ROAS</div><div class="val">${peak.roas.toFixed(2)}x</div><div class="sub">${peak.week}</div></div>
+      <div class="metric"><div class="lbl">ROAS terkini</div><div class="val">${last.roas.toFixed(2)}x</div><div class="sub">${last.week}</div></div>
+      <div class="metric"><div class="lbl">Total spend</div><div class="val">${fmtM(totalSpend)}</div></div>
+      <div class="metric"><div class="lbl">Decision</div><div class="val" style="font-size:14px">${decisionBadge(getDecision(last,c))}</div></div>
     </div>
+    <div class="hist-warning">${phaseMsg[phase]||phase}</div>
+    <div class="chart-wrap" style="height:220px;margin-bottom:1.25rem"><canvas id="histChart"></canvas></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Week</th><th>Spend</th><th>ROAS</th><th>CTR</th><th>CPC</th><th>Hook Rate</th><th>Purchases</th><th>Impressions</th><th>Decision</th></tr></thead>
+      <tbody>${entries.map(e=>`<tr>
+        <td class="mono" style="font-weight:500">${e.week}</td>
+        <td class="mono">${fmtM(e.spend)}</td>
+        <td class="mono" style="color:${e.roas>=(c.targetRoas||3)?'var(--up)':'var(--text)'}">${e.roas.toFixed(2)}x</td>
+        <td class="mono">${e.ctr.toFixed(2)}%</td>
+        <td class="mono">${e.cpc?fmt(e.cpc):'—'}</td>
+        <td class="mono">${e.hook?e.hook+'%':'—'}</td>
+        <td class="mono">${e.purch||'—'}</td>
+        <td class="mono">${e.impr?Number(e.impr).toLocaleString('id-ID'):'—'}</td>
+        <td>${decisionBadge(getDecision(e,c))}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+  setTimeout(()=>{
+    const ctx=R('histChart');if(!ctx)return;
+    if(histInst){histInst.destroy();histInst=null;}
+    histInst=new Chart(ctx,{type:'line',data:{
+      labels:entries.map(e=>e.week),
+      datasets:[
+        {label:'ROAS',data:entries.map(e=>e.roas),borderColor:'#c8f77a',backgroundColor:'#c8f77a15',tension:0.35,yAxisID:'y',pointRadius:5,borderWidth:2},
+        {label:'CTR %',data:entries.map(e=>e.ctr),borderColor:'#60a5fa',backgroundColor:'#60a5fa15',tension:0.35,yAxisID:'y2',pointRadius:5,borderWidth:2,borderDash:[4,3]}
+      ]
+    },options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toFixed(2)}${c.datasetIndex===0?'x':'%'}`}}},
+      scales:{
+        y:{position:'left',grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555',callback:v=>`${v}x`,font:{size:11,family:'DM Mono'}}},
+        y2:{position:'right',grid:{display:false},ticks:{color:'#555',callback:v=>`${v}%`,font:{size:11,family:'DM Mono'}}}
+      }
+    }});
+  },50);
+}
 
-  </div>
-</div>
+// ── Contents ─────────────────────────────────────────────
+function addContent(){
+  if(!isAdmin())return;
+  const name=R('c-name').value.trim();
+  if(!name){toast('Isi nama konten dulu','err');return}
+  S.contents.push({id:'c'+Date.now(),name,product:R('c-product').value.trim(),format:R('c-format').value,hook:R('c-hook').value,targetRoas:parseFloat(R('c-troas').value)||3.0,targetCtr:parseFloat(R('c-tctr').value)||2.0,date:R('c-date').value||new Date().toISOString().slice(0,10),notes:R('c-notes').value.trim()});
+  save();populateSelects();renderContentTable();renderDash();
+  R('c-name').value='';R('c-product').value='';R('c-notes').value='';
+  toast('Konten ditambah!');
+}
 
-<!-- ═══════════════════ CREATIVE & AUDIENCE REFRESH ═══════════════════ -->
-<div class="arrow-down"><div class="line" style="height:20px"></div><div class="head">▼</div></div>
+function deleteContent(id){
+  if(!isAdmin())return;
+  if(!confirm('Hapus konten ini? Semua entry-nya juga ikut terhapus.'))return;
+  S.contents=S.contents.filter(c=>c.id!==id);
+  S.entries=S.entries.filter(e=>e.cid!==id);
+  save();populateSelects();renderContentTable();renderDash();toast('Konten dihapus');
+}
 
-<div class="section-label" style="margin-top:4px">CREATIVE & AUDIENCE REFRESH — JALAN TERUS SETIAP 2 MINGGU</div>
+function renderContentTable(){
+  const el=R('content-table');
+  if(!S.contents.length){el.innerHTML='<div class="empty">Belum ada konten.</div>';return}
+  const showDel=isAdmin();
+  el.innerHTML=`<table><thead><tr><th>Nama</th><th>Produk</th><th>Format</th><th>Hook</th><th>Target ROAS</th><th>Target CTR</th><th>Weeks</th>${showDel?'<th></th>':''}</tr></thead><tbody>${
+    S.contents.map(c=>{
+      const n=getEntries(c.id).length;
+      return`<tr>
+        <td style="font-weight:500">${c.name}</td><td>${c.product}</td>
+        <td class="mono">${c.format}</td><td style="font-size:12px;color:var(--text3)">${c.hook}</td>
+        <td class="mono">${c.targetRoas}x</td><td class="mono">${c.targetCtr}%</td>
+        <td class="mono">${n}w</td>
+        ${showDel?`<td><button class="btn btn-danger btn-sm" onclick="deleteContent('${c.id}')">Hapus</button></td>`:''}
+      </tr>`;
+    }).join('')
+  }</tbody></table>`;
+}
 
-<div class="frame" style="width:1380px; border-color:#00796b">
-  <div class="frame-title" style="color:#80cbc4">LAYER 4 — CREATIVE MANAGEMENT & AUDIENCE HEALTH</div>
-
-  <div class="row" style="gap:32px; align-items:flex-start">
-
-    <div class="compound">
-      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:6px">CREATIVE REFRESH (setiap 10–14 hari)</div>
-      <div class="node rect c-phase" style="min-width:300px; white-space:normal; padding:10px 14px; font-size:11px; background:#004d40; border-color:#009688">
-        <div>
-          <div style="font-weight:400; text-align:left; line-height:1.7">
-            <b>Trigger ganti creative:</b><br>
-            • CTR turun &gt;20% dari rata-rata<br>
-            • Frequency &gt;5x dalam 7 hari (retargeting)<br>
-            • ROAS mulai drop meski budget sama<br><br>
-            <b>Format rekomendasi:</b><br>
-            • Carousel: retargeting SKU spesifik<br>
-            • Collection: DABA prospecting<br>
-            • Video (ACV): broad prospecting<br>
-            • Static: flash promo / event
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="compound">
-      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:6px">AUDIENCE HEALTH CHECK (tiap minggu)</div>
-      <div class="node rect c-phase" style="min-width:300px; white-space:normal; padding:10px 14px; font-size:11px; background:#004d40; border-color:#009688">
-        <div>
-          <div style="font-weight:400; text-align:left; line-height:1.7">
-            <b>Retargeting:</b><br>
-            • Audience &lt;5.000? → Perluas window (7 → 14 hari)<br>
-            • Frequency tinggi → Exclude purchaser lebih agresif<br>
-            • Saturation? → Tambah SKU ke catalog<br><br>
-            <b>Prospecting:</b><br>
-            • Refresh LAL dari purchaser terbaru (setiap 30 hari)<br>
-            • DABA broad → biarkan Meta pilih, jangan filter berlebihan<br>
-            • Jangan narrow dengan interest/city/age kecuali ada alasan kuat
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="compound">
-      <div style="font-size:11px; font-weight:700; color:#80cbc4; margin-bottom:6px">DATA DELAY — PENTING!</div>
-      <div class="note" style="max-width:260px; border-color:#f9a825">
-        <div style="font-weight:700; color:#ffd54f; margin-bottom:6px">⏱ CPAS Data Delay</div>
-        <ul style="font-size:11px; line-height:1.7">
-          <li>Data konversi dari Shopee ke Meta: <b>delay 24–48 jam</b></li>
-          <li>Jangan evaluasi data hari ini → evaluasi data 2 hari lalu</li>
-          <li>Kalau ROAS kelihatan sangat rendah hari ini → cek lagi besok</li>
-          <li>Window evaluasi: ambil data <b>7 hari, minus 2 hari terakhir</b></li>
-        </ul>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- footer note -->
-<div style="margin-top:28px; text-align:center; color:#546e7a; font-size:11px; border-top:1px dashed #263238; padding-top:14px; width:1380px">
-  Framework ini hanya bekerja jika dijalankan sebagai aturan, bukan referensi. Evaluasi per 7 hari, satu perubahan per siklus, dan jangan reaktif terhadap data harian.
-  <br>Dibuat berdasarkan: Meta CPAS Best Practices, Shopee Collaborative Ads Training, Meta Learning Phase Guidelines 2025–2026.
-</div>
-
-</div><!-- end .flow -->
+// ── Selects ──────────────────────────────────────────────
+function populateSelects(){
+  const opts='<option value="">-- pilih --</option>'+S.contents.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  R('l-content').innerHTML=opts;
+  R('hist-select').innerHTML=opts;
+}
+</script>
 </body>
 </html>
